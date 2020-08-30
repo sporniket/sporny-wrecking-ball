@@ -12,6 +12,7 @@
                         include                 'macros/palette.s'
                         include                 'macros/memory.s'
                         include                 'macros/tricks.s'
+                        include                 'macros/dmasnd.s'
                         include                 'macros/special.s'
 
 ; ================================================================================================================

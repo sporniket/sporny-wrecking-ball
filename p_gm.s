@@ -155,8 +155,8 @@ ExecSoundBallRebound:
                         ; -- setup A 440 Hz to channel A (Tone $11C -> {0,1}={$1c,$01})
                         move.b                  #0,$ff8800
                         move.b                  #$1c,$ff8802
-                        move.b                  #0,$ff8800
-                        move.b                  #$1c,$ff8802
+                        move.b                  #1,$ff8800
+                        move.b                  #$01,$ff8802
                         ; -- set envelop 0
                         move.b                  #13,$ff8800
                         move.b                  #$0,$ff8802
@@ -176,6 +176,147 @@ DoSoundBallRebound      macro
                         ; -- supexec the routine
                         _Supexec                #ExecSoundBallRebound
                         endm
+;
+
+;
+DoBlitPlayer            macro
+                        ; - 1 address to the sprite data
+                        ; - 2 address to the start of memory screen to update
+                        ; - 3 shift to the right
+                        ; - 4 spare address register
+                        ; - 5 spare address register
+                        ; - 6 spare data register
+                        ; --
+                        ; \4 := blitter base
+                        move.l                  #BlitterBase,\4
+                        ; -- Setup Source
+                        ; \5 := base + $20
+                        lea                     $20(\4),\5
+                        move.w                  #8,(\5)+ ; source x increment
+                        move.w                  #0,(\5)+ ; source y increment
+                        move.l                  \1,(\5)+ ; source address
+                        ; -- setup masks
+                        ; \6 := $ffff0000 >> \3 = [endmask 1|endmask3]
+                        move.l                  #$ffff0000,\6
+                        lsr.l                   \3,\6
+                        ; swap to put endmask1, swap again to put endmask3
+                        swap                    \6
+                        move.w                  \6,(\5)+
+                        move.w                  #$ffff,(\5)+
+                        swap                    \6
+                        move.w                  \6,(\5)+
+                        ; -- setup Dest
+                        move.w                  #8,(\5)+
+                        move.w                  #128,(\5)+ ; 160 bytes - 4 * 8
+                        move.l                  \2,(\5)+
+                        ; -- setup x/y counts
+                        move.w                  #5,(\5)+
+                        move.w                  #8,(\5)+
+                        ; -- Hop/op values
+                        move.w                  #$0203,(\5)+ ; HOP = 2 (source), OP = 3 (source)
+                        ; -- set skew/shift registers
+                        addq.l                  #1,\5
+                        move.b                  \3,(\5)
+                        ; -- do the blit
+                        DoBlitAndWait
+                        endm
+;
+                        ; -- use the blitter to display the player
+                        ; -- a3 : start of the data of the player
+                        ; -- a2 : start of the memory screen to update
+                        ; -- d1 : shift to do
+                        ; -- a1, a0, d0 : spare register.
+ExecShowPlayer          DoBlitPlayer            a3,a2,d1,a1,a0,d0
+                        addq.l                  #2,a3
+                        addq.l                  #2,a2
+                        DoBlitPlayer            a3,a2,d1,a1,a0,d0
+                        addq.l                  #2,a3
+                        addq.l                  #2,a2
+                        DoBlitPlayer            a3,a2,d1,a1,a0,d0
+                        addq.l                  #2,a3
+                        addq.l                  #2,a2
+                        DoBlitPlayer            a3,a2,d1,a1,a0,d0
+                        rts
+;
+
+;
+DoBlitBall              macro
+                        ; - 1 address to the sprite data
+                        ; - 2 address to the start of memory screen to update
+                        ; - 3 shift to the right
+                        ; - 4 spare address register
+                        ; - 5 spare address register
+                        ; - 6 spare data register
+                        ; --
+                        ; \4 := blitter base
+                        move.l                  #BlitterBase,\4
+                        ; -- Setup Source
+                        ; \5 := base + $20
+                        lea                     $20(\4),\5
+                        move.w                  #8,(\5)+ ; source x increment
+                        move.w                  #0,(\5)+ ; source y increment
+                        move.l                  \1,(\5)+ ; source address
+                        ; -- setup masks
+                        ; \6 := $ffff0000 >> \3 = [endmask 1|endmask3]
+                        move.l                  #$f0000000,\6
+                        lsr.l                   \3,\6
+                        ; swap to put endmask1, swap again to put endmask3
+                        swap                    \6
+                        move.w                  \6,(\5)+
+                        move.w                  #$ffff,(\5)+
+                        swap                    \6
+                        move.w                  \6,(\5)+
+                        ; -- setup Dest
+                        move.w                  #8,(\5)+
+                        move.w                  #152,(\5)+ ; 160 bytes - 1 * 8
+                        move.l                  \2,(\5)+
+                        ; -- setup x/y counts
+                        move.w                  #2,(\5)+
+                        move.w                  #4,(\5)+
+                        ; -- Hop/op values
+                        move.w                  #$0203,(\5)+ ; HOP = 2 (source), OP = 3 (source)
+                        ; -- set skew/shift registers
+                        addq.l                  #1,\5
+                        move.b                  \3,(\5)
+                        ; -- do the blit
+                        DoBlitAndWait
+                        endm
+;
+                        ; -- use the blitter to display the player
+                        ; -- a3 : start of the data of the player
+                        ; -- a2 : start of the memory screen to update
+                        ; -- d1 : shift to do
+                        ; -- a1, a0, d0 : spare register.
+ExecShowBall            DoBlitBall              a3,a2,d1,a1,a0,d0
+                        addq.l                  #2,a3
+                        addq.l                  #2,a2
+                        DoBlitBall              a3,a2,d1,a1,a0,d0
+                        addq.l                  #2,a3
+                        addq.l                  #2,a2
+                        DoBlitBall              a3,a2,d1,a1,a0,d0
+                        addq.l                  #2,a3
+                        addq.l                  #2,a2
+                        DoBlitBall              a3,a2,d1,a1,a0,d0
+                        rts
+;
+
+
+ExecSoundGetReady
+                        DmaSound_playOnce       #SndGetReadyBase,#SndGetReadyTop,a0,d1,d0
+                        rts
+;
+ExecSoundOhNo
+                        DmaSound_playOnce       #SndOhNoBase,#SndOhNoTop,a0,d1,d0
+                        rts
+;
+ExecSoundGameOver
+                        DmaSound_playOnce       #SndGameOverBase,#SndGameOverTop,a0,d1,d0
+                        rts
+;
+ExecSoundGameClear
+                        DmaSound_playOnce       #SndYouWonBase,#SndYouWonTop,a0,d1,d0
+                        rts
+;
 
 ; ----------------------------------------------------------------------------------------------------------------
 ; before all
@@ -212,6 +353,9 @@ PhsGameBeforeAll:       ; ========
                         move.l                  #SprDtBrickRow3Odd,(a6)+
                         move.l                  #SprDtBrickRow4Odd,(a6)+
                         move.l                  #SprDtNoBrickOdd,(a6)+
+                        ;
+                        ; -- setup microwire sound
+                        _Supexec                #SetupMicrowire
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; before each
@@ -252,7 +396,15 @@ PhsGameBeforeEach:      ; ========
                         ; -- Game is not over
                         ; a6 := ptr to the game
                         lea                     TheGame,a6
-                        move.b                  #1,5(a6)
+                        move.b                  #1,4(a6)
+                        ; ========
+                        ; -- Level is full
+                        ; a6 := ptr to the level
+                        lea                     TheLevel,a6
+                        move.b                  #200,0(a6)
+                        ; ========
+                        ; -- Introductory sound
+                        _Supexec                #ExecSoundGetReady
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; update
@@ -262,7 +414,7 @@ PhsGameUpdate:
                         ; -- is game not over ?
                         ; a6 := the game
                         lea                     TheGame,a6
-                        tst.b                   5(a6)
+                        tst.b                   4(a6)
                         bne.s                   .startUpdateBall
                         ; -- else end of game, go to the next phase
                         ; a2 := subroutines
@@ -314,13 +466,17 @@ PhsGameUpdate:
                         ; -- if there are remaining balls
                         bne.s                   .useRemainingBall
                         ; -- else game over
-                        move.b                  #0,5(a6)
+                        move.b                  #0,4(a6)
+                        ; -- play "game over" sound
+                        _Supexec                #ExecSoundGameOver
                         ; -- game over, return
                         rts
                         ; -- decrease remaining ball, init ball position and freeze
 .useRemainingBall       subq.b                  #1,d4
                         ; -- update remaining ball
                         move.b                  d4,9(a5)
+                        ; -- play "oh no"
+                        _Supexec                #ExecSoundOhNo
                         ; -- init ball position and freeze (copy from before each)
                         ; a4 := ptr to the ball
                         move.l                  a5,a4
@@ -342,7 +498,7 @@ PhsGameUpdate:
                         bhi.s                   .doMoveBallAlongY
                         ; -- else rebound to go down
                         moveq                   #1,d7
-                        and.b                   #$fd,d5                   ; mark rebound on y as done
+                        bclr.b                  #1,d5                   ; mark rebound on y as done
                         DoSoundBallRebound
                         bra.s                   .doMoveBallAlongY
 .tryMoveBallDown        ; ========
@@ -374,7 +530,7 @@ PhsGameUpdate:
                         bhi.w                   .doMoveBallAlongX
                         ; -- else rebound to go right
                         moveq                   #1,d7
-                        and.b                   #$fe,d5                   ; mark rebound along x as done
+                        bclr.b                  #0,d5                    ; mark rebound along x as done
                         DoSoundBallRebound
                         bra.s                   .doMoveBallAlongX
 .tryMoveBallRight       ; ========
@@ -383,7 +539,7 @@ PhsGameUpdate:
                         bmi.s                   .doMoveBallAlongX
                         ; -- else rebound to go left
                         moveq                   #-1,d7
-                        and.b                   #$fe,d5                   ; mark rebound along x as done
+                        bclr.b                  #0,d5                    ; mark rebound along x as done
                         DoSoundBallRebound
 .doMoveBallAlongX       ; ========
                         ; d6 := next x = x + dx
@@ -408,6 +564,7 @@ PhsGameUpdate:
                         ; -- 3. (next x, y)
                         ; -- Then store each test in d5 : ...312yx
                         ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
+                        bclr.l                  #3,d5
                         ; -- test 1
                         TstPosToFreedomMatrix   d6,d3,a4,a3,d2,d1
                         ; if position is free
@@ -416,6 +573,7 @@ PhsGameUpdate:
                         bset.l                  #3,d5
 .tstFreedom2            ; ========
                         ; -- test 2
+                        bclr.l                  #2,d5
                         ; d0 := x
                         move.b                  0(a5),d0
                         ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
@@ -426,6 +584,7 @@ PhsGameUpdate:
                         bset.l                  #2,d5
 .tstFreedom3            ; ========
                         ; -- test 3
+                        bclr.l                  #4,d5
                         ; d0 := y
                         move.b                  1(a5),d0
                         ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
@@ -460,7 +619,7 @@ PhsGameUpdate:
                         ; -- d1 : case 0
                         ; -- do rebound x if bit 2 of d2 set or d2 == 2
                         btst.l                  #2,d2
-                        beq.s                   .doBallReboundX
+                        beq.w                   .commitBall
                         cmp.b                   #2,d2
                         bne.w                   .commitBall
 .doBallReboundX         ; ========
@@ -483,6 +642,43 @@ PhsGameUpdate:
                         cmp.b                   #7,d2
                         beq.w                   .commitBall
 .doBallReboundY         ; ========
+                        ; -- special behaviour if collision against the paddle
+                        tst.b                   d4
+                        ; -- if ball going up
+                        bmi.s                   .doBallReboundYReally
+                        ; -- else
+                        cmp.b                   #40,d3
+                        ; -- if next y out of the paddle area
+                        bmi.s                   .doBallReboundYReally
+                        ; -- else collision against the player bumper, need x
+                        ; a3 := PlayerBumper
+                        lea                     PlayerBumper,a3
+                        ; d0 := -(bumper.x - (next x - dx)) = -bumper.x + next x - dx
+                        move.b                  0(a3),d0
+                        add.b                   d7,d0
+                        neg.b                   d0
+                        add.b                   d6,d0
+                        ; -- test the side of rebound or in the middle, force direction on the side, leave in the middle
+                        cmp.b                   #12,d0
+                        bmi.s                   .isBumpOnLeft
+                        ; -- else force dx to the right
+                        tst.b                   d7
+                        ; -- if needed to force
+                        bmi.s                   .forceXMove
+                        bra.s                   .doBallReboundYReally
+.isBumpOnLeft           cmp.b                   #3,d0
+                        bpl.s                   .doBallReboundYReally
+                        ; -- force dx to the left
+                        tst.b                   d7
+                        bmi.s                   .doBallReboundYReally
+                        ; -- ... only if need to force
+.forceXMove             ; d7 := -d7
+                        neg.b                   d7
+                        ; d6 := d6 + 2 * d7
+                        add.b                   d7,d6
+                        add.b                   d7,d6
+.doBallReboundYReally:
+                        ; -- do the rebound
                         ; d4 := -d4
                         neg.b                   d4
                         ; d3 := d3 + d4 + d4
@@ -499,7 +695,7 @@ PhsGameUpdate:
                         ; -- go to doBallReboundY (closer to this point)
                         ; // TODO : use a vectors of jumps, should be better for highest values of d2 (do the math before)
                         ; switch d2 : case 0
-                        tst.b                   d2,
+                        tst.b                   d2
                         beq.s                   .commitBall
                         ; switch d2 : case 1
                         cmp.b                  #1,d2
@@ -602,7 +798,7 @@ PhsGameUpdate:
                         ; -- else moving right
                         addq.b                  #2,d6
                         ; ========
-                        ; -- Apply dx to y, must stay inside [0...64]
+                        ; -- Apply dx to x, must stay inside [0...64]
 .applyMoveX             add.b                   d6,d7
                         ; -- x >= 0 ?
                         bpl.s                   .capX
@@ -625,7 +821,6 @@ PhsGameUpdate:
                         ; -- PlayerBumper.dy
                         move.b                  d4,7(a6)
 
-; -- bricks, TODO
                         ; ======== ======== ======== ========
                         ; == update level
                         ; ========
@@ -737,6 +932,22 @@ PhsGameUpdate:
                         ; -- update and save item count
                         addq.b                  #1,d3
                         move.b                  d3,5(a6)
+                        ; -- Get count of remaining bricks
+                        ; d2 := remaining bricks of the level
+                        moveq                   #0,d2
+                        move.b                  0(a6),d2
+                        ; -- update count of remaining bricks
+                        sub.b                   d3,d2
+                        ; -- if there are still some bricks to break
+                        bhi.s                   .commitBrickCount
+                        ; -- else game is cleared
+                        _Supexec                #ExecSoundGameClear
+                        ; -- the game is over
+                        ; a5 := ptr to the Game
+                        lea                     TheGame,a5
+                        move.b                  #0,4(a5)
+                        ; -- commit the updated remaining bricks count
+.commitBrickCount       move.b                  d2,0(a6)
                         ; ========
 .cleanupBrickSavedField ; -- reset saved next x, next y, rebound status
                         move.b                  #0,2(a6)
@@ -859,10 +1070,20 @@ PhsGameRedraw:          ; ========
                         ; -- is game not over ?
                         ; a6 := the game
                         lea                     TheGame,a6
-                        tst.b                   5(a6)
-                        bne.s                   .startRedrawBricks
+                        tst.b                   4(a6)
+                        bne.s                   .startEraseRemainingBall
                         ; -- else do nothing
                         rts
+                        ; ======== ======== ======== ========
+                        ; -- erase the remaining balls
+                        ; a4 := start of the display = a5 + 196 * 160  = a5 + 31360
+.startEraseRemainingBall:
+                        lea                     31360(a5),a4
+                        rept 4
+                        move.l                  #$ffff0000,(a4)+
+                        move.l                  #0,(a4)+
+                        lea                     152(a4),a4
+                        endr
 .startRedrawBricks      ; ======== ======== ======== ========
                         ; == Redraw (erase only) bricks
                         ; ========
@@ -1007,36 +1228,27 @@ PhsGameRedraw:          ; ========
                         tst.w                   d4
                         bne.s                   .drawPlayerOdd
                         ; -- else the player is aligned to 16px positions
-                        ; d3 := loop counter
-                        moveq                   #7,d3
-.loopDrawEven           move.l                  #$ffffffff,(a3)+
-                        move.l                  #0,(a3)+
-                        move.l                  #$ffffffff,(a3)+
-                        move.l                  #0,(a3)+
-                        move.l                  #$ffffffff,(a3)+
-                        move.l                  #0,(a3)+
-                        move.l                  #$ffffffff,(a3)+
-                        move.l                  #0,(a3)+
-                        lea                     128(a3),a3
-                        dbf.s                   d3,.loopDrawEven
+                        ; -- setup register for calling the display macro
+                        ; a2 := a3 (dest)
+                        move.l                  a3,a2
+                        ; a3 := sprite player
+                        move.l                  #SpritesDat,a3
+                        lea                     DatSprtsPlayerBase(a3),a3
+                        ; d1 := 0
+                        moveq                   #0,d1
+                        _Supexec                #ExecShowPlayer
                         bra.s                   .doneDrawPlayer
 .drawPlayerOdd          ; ========
                         ; d3 := loop counter
-                        moveq                   #7,d3
-.loopDrawOdd            and.l                   #$ff00ff00,(a3)
-                        or.l                    #$00ff00ff,(a3)+
-                        and.l                   #$ff00ff00,(a3)+
-                        move.l                  #$ffffffff,(a3)+
-                        move.l                  #0,(a3)+
-                        move.l                  #$ffffffff,(a3)+
-                        move.l                  #0,(a3)+
-                        move.l                  #$ffffffff,(a3)+
-                        move.l                  #0,(a3)+
-                        and.l                   #$00ff00ff,(a3)
-                        or.l                    #$ff00ff00,(a3)+
-                        and.l                   #$00ff00ff,(a3)+
-                        lea                     120(a3),a3
-                        dbf.s                   d3,.loopDrawOdd
+                        ; -- setup register for calling the display macro
+                        ; a2 := a3 (dest)
+                        move.l                  a3,a2
+                        ; a3 := sprite player
+                        move.l                  #SpritesDat,a3
+                        lea                     DatSprtsPlayerBase(a3),a3
+                        ; d1 := 0
+                        moveq                   #8,d1
+                        _Supexec                #ExecShowPlayer
 .doneDrawPlayer         ; ========
                         ; -- done, commit model update
                         move.b                  4(a6),0(a6)
@@ -1058,6 +1270,9 @@ RedrawBall:
                         ; d7 := from y to offset
                         ; d2 := temp
                         ModelToScreenY          1(a6),d7,d2
+                        cmp.l                   #32000,d7
+                        ; -- if out of screen
+                        bpl.w                   .draw
                         ; -- update offset a3
                         add.l                   d7,a3
                         ; ======
@@ -1142,6 +1357,9 @@ RedrawBall:
                         ; d7 := from newY to offset
                         ; d2 := temp
                         ModelToScreenY           5(a6),d7,d2
+                        cmp.l                   #32000,d7
+                        ; -- if out of screen
+                        bpl.s                   .commitBall
                         ; -- update offset
                         add.l                   d7,a3
                         ; ======
@@ -1151,60 +1369,18 @@ RedrawBall:
                         ; -- update offset a3
                         add.w                   d7,a3
                         ; ========
-                        ; draw using the right shift
-                        dbf.s                   d6,.caseDrawShift4
-                        or.l                    #$60006000,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$f000f000,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$f000f000,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$60006000,(a3)+
-                        or.l                    #0,(a3)+
-                        bra.w                   .done
-.caseDrawShift4         dbf.s                   d6,.caseDrawShift8
-                        or.l                    #$06000600,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$0f000f00,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$0f000f00,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$06000600,(a3)+
-                        or.l                    #0,(a3)+
-                        bra.s                   .done
-.caseDrawShift8         dbf.s                   d6,.caseDrawShift12
-                        or.l                    #$00600060,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$00f000f0,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$00f000f0,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$00600060,(a3)+
-                        or.l                    #0,(a3)+
-                        bra.s                   .done
-.caseDrawShift12        or.l                    #$00060006,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$000f000f,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$000f000f,(a3)+
-                        or.l                    #0,(a3)+
-                        lea                     152(a3),a3
-                        or.l                    #$00060006,(a3)+
-                        or.l                    #0,(a3)+
-.done                   nop
+                        ; -- setup register for calling the display macro
+                        ; a2 := a3 (dest)
+                        move.l                  a3,a2
+                        ; a3 := sprite ball
+                        move.l                  #SpritesDat,a3
+                        lea                     DatSprtsBallBase(a3),a3
+                        ; d1 := d6 * 4
+                        move.w                  d6,d1
+                        WdMul4                  d1
+                        _Supexec                #ExecShowBall
                         ; -- done, commit new coordinates
-                        move.b                  4(a6),0(a6)
+.commitBall             move.b                  4(a6),0(a6)
                         move.b                  5(a6),1(a6)
 
 .DrawRemainingBalls:     ; ========
@@ -1213,40 +1389,34 @@ RedrawBall:
                         moveq                   #0,d7
                         move.b                  9(a6),d7
                         tst.b                   d7
-                        ; a4 := start of the display at bitplan 3 = a5 + 196 * 160 + 6 = a5 + 31366
-                        lea                     31366(a5),a4
+                        ; a4 := start of the display = a5 + 196 * 160 = a5 + 31360
+                        lea                     31360(a5),a4
                         ; -- if (d7 == 0)
-                        beq.s                   .drawNoRemaining
+                        beq.s                   .thatsAll
                         ; -- else display some balls (up to 2)
+                        ; -- setup register for calling the display macro
+                        ; a2 := start of the display = a5 + 196 * 160 = a5 + 31360
+                        lea                     31360(a5),a2
+                        ; a3 := sprite ball
+                        move.l                  #SpritesDat,a3
+                        lea                     DatSprtsBallBase(a3),a3
+                        ; d1 := 0
+                        move.w                  #0,d1
+                        _Supexec                #ExecShowBall
                         cmp.b                   #2,d7
                         ; -- if (d7 < 2)
-                        bpl.s                   .drawTwoRemaining
-                        move.w                  #$6000,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$f000,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$f000,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$6000,(a4)
-                        ; -- thatsAll
-                        rts
+                        bmi.s                   .thatsAll
 .drawTwoRemaining       ; ========
-                        move.w                  #$6060,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$f0f0,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$f0f0,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$6060,(a4)
-                        rts
-.drawNoRemaining        ; ========
-                        move.w                  #$0,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$0,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$0,(a4)
-                        lea                     160(a4),a4
-                        move.w                  #$0,(a4)
+                        ; -- else display some balls (up to 2)
+                        ; a2 := start of the display = a5 + 196 * 160 = a5 + 31360
+                        lea                     31360(a5),a2
+                        ; a3 := sprite ball
+                        move.l                  #SpritesDat,a3
+                        lea                     DatSprtsBallBase(a3),a3
+                        ; d1 := 8
+                        move.w                  #8,d1
+                        _Supexec                #ExecShowBall
+                        ; ========
 .thatsAll               rts
 ;
 ; ----------------------------------------------------------------------------------------------------------------

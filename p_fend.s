@@ -58,10 +58,10 @@ PhsFadeToEndUpdate:
                         ; -- else next phase
                         move.l                  #PhsFadeToEndAfterEach,a2
                         jsr                     (a2)
-                        move.l                  #PhsFadeToGameBeforeEach,a2
+                        move.l                  #PhsMenuBeforeEach,a2
                         jsr                     (a2)
-                        move.l                  #PhsFadeToGameUpdate,PtrNextUpdate
-                        move.l                  #PhsFadeToGameRedraw,PtrNextRedraw
+                        move.l                  #PhsMenuUpdate,PtrNextUpdate
+                        move.l                  #PhsMenuRedraw,PtrNextRedraw
                         bra.s                   .thatsAll
                         ; ========
                         ; -- update Fend.Count

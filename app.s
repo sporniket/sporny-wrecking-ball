@@ -24,6 +24,28 @@ HposFreedomBase         equ                     2426
 HposFreedomTop          equ                     2926
 HposEnd                 equ                     2926
 
+
+; Data of Sprite sets
+DatSprtsBricksBase      equ                     0
+DatSprtsBricksTop       equ                     320
+DatSprtsBallBase        equ                     320
+DatSprtsBallTop         equ                     352
+DatSprtsPlayerBase      equ                     352
+DatSprtsPlayerTop       equ                     608
+
+;
+BlitterBase             equ                     $ffff8a00
+BlitterMiscReg1         equ                     $ffff8a3c
+;
+DoBlitAndWait           macro
+                        or.b                    #$80,BlitterMiscReg1.w
+.waitFinish\@           bset.b                  #7,BlitterMiscReg1.w
+                        nop
+                        bne.s                   .waitFinish\@
+                        endm
+
+SetupMicrowire          DmaSound_setupMicrowire
+                        rts
 ; ================================================================================================================
 ; App body
 ; ================================================================================================================
@@ -31,19 +53,23 @@ BodyOfApp:              ; Entry point of the application
                         ; Your code start here...
                         ; ========
                         ; -- call 'before all' of each phase
+                        move.l                  #PhsMenuBeforeAll,a2
+                        jsr                     (a2)
                         move.l                  #PhsFadeToGameBeforeAll,a2
                         jsr                     (a2)
                         move.l                  #PhsGameBeforeAll,a2
                         jsr                     (a2)
+                        move.l                  #PhsFadeToEndBeforeAll,a2
+                        jsr                     (a2)
                         ; ========
-                        ; -- First phase is 'fade to game'
-                        move.l                  #PhsFadeToGameUpdate,PtrCurrentUpdate
-                        move.l                  #PhsFadeToGameUpdate,PtrNextUpdate
+                        ; -- First phase is 'menu'
+                        move.l                  #PhsMenuUpdate,PtrCurrentUpdate
+                        move.l                  #PhsMenuUpdate,PtrNextUpdate
                         ; ========
-                        move.l                  #PhsFadeToGameRedraw,PtrCurrentRedraw
-                        move.l                  #PhsFadeToGameRedraw,PtrNextRedraw
+                        move.l                  #PhsMenuRedraw,PtrCurrentRedraw
+                        move.l                  #PhsMenuRedraw,PtrNextRedraw
                         ;
-                        move.l                  #PhsFadeToGameBeforeEach,a2
+                        move.l                  #PhsMenuBeforeEach,a2
                         jsr                     (a2)
 
 
@@ -121,6 +147,8 @@ ModelToScreenY          macro
                         endm
 
 ; ================================================================================================================
+                        ;
+                        include                 'p_menu.s'              ; Menu phase
                         include                 'p_fdgm.s'              ; Fade to Game phase
                         include                 'p_gm.s'                ; Game phase
                         include                 'p_fend.s'              ; Fade to end (then cycle)
@@ -153,5 +181,28 @@ SprDtNoBrickEven        dc.l                    $ff000000,$00000000
 SprDtNoBrickOdd         dc.l                    $00ff0000,$00000000
 ; ================================================================================================================
 ; Sprite vector : bricks
-SprVcBrickEven          ds.l                    6,0
-SprVcBrickOdd           ds.l                    6,0
+SprVcBrickEven          ds.l                    6
+SprVcBrickOdd           ds.l                    6
+SprPtrArrayBricks       ds.l                    6
+;
+; ================================================================================================================
+SpritesDat0:            dc.l                    $ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000
+                        dc.l                    $ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000
+SpritesDat:             incbin                  'assets/sprt.dat'
+                        even
+;
+TitleDat:               incbin                  'assets/title.pi1'
+                        even
+; ================================================================================================================
+SndGetReadyBase         incbin                  'assets/s_gtrdy.dat'
+                        even
+SndGetReadyTop          dc.w                    0
+SndOhNoBase             incbin                  'assets/s_ohno.dat'
+                        even
+SndOhNoTop              dc.w                    0
+SndGameOverBase         incbin                  'assets/s_gmovr.dat'
+                        even
+SndGameOverTop          dc.w                    0
+SndYouWonBase           incbin                  'assets/s_yuwon.dat'
+                        even
+SndYouWonTop            dc.w                    0
