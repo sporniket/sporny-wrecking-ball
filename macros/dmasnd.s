@@ -5,6 +5,24 @@
 ; ================================================================================================================
 ; REQUIRES systraps.s,
 ; ================================================================================================================
+; Dma Sound setup structure
+                        rsreset
+DmaSound_base           rs.l 1                  ; pointer to start of the sound (included)
+DmaSound_top            rs.l 1                  ; pointer to end of the sound (excluded)
+DmaSound_mode           rs.w 1                  ; sound mode : ........m.....rr (m : mono flag ; rr : replay rate)
+SIZEOF_DmaSound         rs.w 0
+
+; constants : modes
+DmaSound_MONO_6         = $80
+DmaSound_MONO_12        = $81
+DmaSound_MONO_25        = $82
+DmaSound_MONO_50        = $83
+
+; constants : control
+DmaSound_CTL_STOP       = 0
+DmaSound_CTL_ONCE       = 1
+DmaSound_CTL_REPEAT     = 3
+; ================================================================================================================
 ; Dma sound macros, MUST be run in supervisor mode
 
 DmaSound_setupFrame     macro
@@ -26,12 +44,12 @@ DmaSound_setupFrame     macro
                         move.w                  \3,(\1)+
                         endm
 ;
-DmaSound_playOnce       macro
+DmaSound_doPlayOnce     macro
                         ; 1 - Label to the base addrress to setup
                         ; 2 - Label to the top address to setup
                         ; 3 - spare adresse register for use
                         ; 4 - spare data register for use
-                        ; 3 - spare dd register for use
+                        ; 5 - spare data register for use
                         ; -- setup frame base
                         move.l                  #$ffff8902,\3
                         move.l                  \1,\4
@@ -45,7 +63,18 @@ DmaSound_playOnce       macro
                         ; -- play once
                         move.w                  #$0001,$ffff8900
                         endm
-
+;
+;
+DmaSound_setupSound     macro
+                        ; fill the target descriptor
+                        ; 1 - Sound memory start (included)
+                        ; 2 - Sound memory end (excluded)
+                        ; 3 - Sound mode
+                        ; 4 - address register, pointer to the descriptor to fill
+                        move.l                  \1,DmaSound_base(\4)
+                        move.l                  \2,DmaSound_top(\4)
+                        move.w                  \3,DmaSound_mode(\4)
+                        endm
 ;
 ; ================================================================================================================
 ; Microwire macros, MUST be run in supervisor mode

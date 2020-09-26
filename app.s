@@ -13,36 +13,43 @@
 ; Constant macros
 ; ================================================================================================================
 ; -- 'Heap POSition' aka memory map of the heap
+; //FIXME use rs.x
+                        rsreset
 ; Grid : 1200 words = 2400 bytes
-HposGridBase            equ                     0
-HposGridTop             equ                     2400
-; Brick status : 25 bytes
-HposBrickBase           equ                     2400
-HposBrickTop            equ                     2425
+HposGridBase            rs.w                    1200
+HposGridTop             rs.w                    0
 ; Freedom bitmap : 500 bytes
-HposFreedomBase         equ                     2426
-HposFreedomTop          equ                     2926
-HposEnd                 equ                     2926
+HposFreedomBase         rs.b                    500
+HposFreedomTop          rs.b                    0
+; Blitter list : 2*(70 bytes (= 1 blit item 2 + 3 blit items 3) + 912 bytes (= 19 x 4 blit item 3)) + 2 bytes (terminator)
+HposBlitListBase        rs.b                    1966
+HposBlitListTop         rs.b                    0
+; Level currently being played
+HposCurrentLvlBase      rs.b                    SIZEOF_Level
+HposCurrentLvlTop       rs.b                    0
+; Transition
+HposFadeEffectBase      rs.b                    SIZEOF_FadeClr
+HposFadeEffectTop       rs.b                    0
+HposEnd                 rs.b                    0
+SIZEOF_HEAP_ACTUAL      rs.b                    0
 
+SetupHeapAddress        macro
+                        ; 1 - offset
+                        ; 2 - address register to set
+                        ; --
+                        DerefPtrToPtr           MmHeapBase,\2
+                        lea                     \1(\2),\2
+                        endm
 
 ; Data of Sprite sets
+; //FIXME use rs
+; //FIXME I separated the sprite sets anyway
 DatSprtsBricksBase      equ                     0
 DatSprtsBricksTop       equ                     320
 DatSprtsBallBase        equ                     320
 DatSprtsBallTop         equ                     352
 DatSprtsPlayerBase      equ                     352
 DatSprtsPlayerTop       equ                     608
-
-;
-BlitterBase             equ                     $ffff8a00
-BlitterMiscReg1         equ                     $ffff8a3c
-;
-DoBlitAndWait           macro
-                        or.b                    #$80,BlitterMiscReg1.w
-.waitFinish\@           bset.b                  #7,BlitterMiscReg1.w
-                        nop
-                        bne.s                   .waitFinish\@
-                        endm
 
 SetupMicrowire          DmaSound_setupMicrowire
                         rts
@@ -53,9 +60,9 @@ BodyOfApp:              ; Entry point of the application
                         ; Your code start here...
                         ; ========
                         ; -- call 'before all' of each phase
-                        move.l                  #PhsMenuBeforeAll,a2
+                        move.l                  #PhsInitLevelBeforeAll,a2
                         jsr                     (a2)
-                        move.l                  #PhsFadeToGameBeforeAll,a2
+                        move.l                  #PhsMenuBeforeAll,a2
                         jsr                     (a2)
                         move.l                  #PhsGameBeforeAll,a2
                         jsr                     (a2)
@@ -77,9 +84,11 @@ PhaseRun:               ; ========
                         IsWaitingKey
                         bne.s                   Finish
                         ; ========
+                        ;Print                   dbgDing
+                        ;_Setcolor #0,#$019
                         move.l                  PtrCurrentUpdate,a2
                         jsr                     (a2)
-
+                        ;_Setcolor #0,#$210
                         ; ========
                         ; prepare redraw
                         _Logbase
@@ -87,14 +96,16 @@ PhaseRun:               ; ========
                         ; ========
                         ; wait vbl
                         _Vsync
+                        ;_Setcolor #0,#$219
                         ; ========
                         move.l                  PtrCurrentRedraw,a2
                         jsr                     (a2)
+                        ;_Setcolor #0,#$200
                         ; ========
                         ; apply next Phase
                         move.l                  PtrNextUpdate,PtrCurrentUpdate
                         move.l                  PtrNextRedraw,PtrCurrentRedraw
-                        bra.s                   PhaseRun
+                        bra                     PhaseRun
 
 Finish:
 
@@ -149,7 +160,7 @@ ModelToScreenY          macro
 ; ================================================================================================================
                         ;
                         include                 'p_menu.s'              ; Menu phase
-                        include                 'p_fdgm.s'              ; Fade to Game phase
+                        include                 'p_inlvl.s'              ; Fade to Game phase
                         include                 'p_gm.s'                ; Game phase
                         include                 'p_fend.s'              ; Fade to end (then cycle)
 
@@ -191,8 +202,34 @@ SpritesDat0:            dc.l                    $ff000000,$00000000,$ff000000,$0
 SpritesDat:             incbin                  'assets/sprt.dat'
                         even
 ;
+SpritesBricksDat:       dc.l                    $ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000
+                        dc.l                    $ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000,$ff000000,$00000000
+                        incbin                  'assets/spr_brck.dat'
+                        even
+;
+;
+SpritesBallsDat:        incbin                  'assets/spr_ball.dat'
+                        even
+;
+;
+SpritesPlayerDat:       incbin                  'assets/spr_padl.dat'
+                        even
+;
+;
+SpritesLinesDat:        incbin                  'assets/spr_line.dat'
+                        even
+;
 TitleDat:               incbin                  'assets/title.pi1'
                         even
+; ================================================================================================================
+; ================================================================================================================
+; Sprite indexes
+                        include                 'assets/ndx_brck.s'
+; ================================================================================================================
+; ================================================================================================================
+; builtin levels
+                        include                 'assets/levels.s'
+; ================================================================================================================
 ; ================================================================================================================
 SndGetReadyBase         incbin                  'assets/s_gtrdy.dat'
                         even
@@ -206,3 +243,10 @@ SndGameOverTop          dc.w                    0
 SndYouWonBase           incbin                  'assets/s_yuwon.dat'
                         even
 SndYouWonTop            dc.w                    0
+; ================================================================================================================
+; ================================================================================================================
+; ================================================================================================================
+; ================================================================================================================
+; ================================================================================================================
+; ================================================================================================================
+; ================================================================================================================

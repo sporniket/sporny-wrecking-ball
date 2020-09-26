@@ -31,26 +31,26 @@ PhsFadeToEndBeforeAll:
 ; before each
 ; ----------------------------------------------------------------------------------------------------------------
 PhsFadeToEndBeforeEach:
-                        ; -- init Fend.Count
+                        ; -- init Fend_Count
                         moveq                   #0,d7
-                        move.w                  d7,Fend.Count
-                        ; -- init Fend.PtrStartToRedraw
+                        move.w                  d7,Fend_Count
+                        ; -- init Fend_PtrStartToRedraw
                         ; d0 := pointer to the start of memory screen
                         _Logbase
-                        move.l                  d0,Fend.PtrStartToRedraw
-                        ; -- init Fend.PtrEndToRedraw
+                        move.l                  d0,Fend_PtrStartToRedraw
+                        ; -- init Fend_PtrEndToRedraw
                         ; d0 := pointer to end of memory screen
                         add.l                   #32000,d0
-                        move.l                  d0,Fend.PtrEndToRedraw
+                        move.l                  d0,Fend_PtrEndToRedraw
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; update
 ; ----------------------------------------------------------------------------------------------------------------
 PhsFadeToEndUpdate:
-                        ; -- Check Fend.Count
-                        ; a6 := Fend.count
-                        lea                     Fend.Count,a6
-                        ; d7 := Fend.count value
+                        ; -- Check Fend_Count
+                        ; a6 := Fend_count
+                        lea                     Fend_Count,a6
+                        ; d7 := Fend_count value
                         move.w                  (a6),d7
                         cmp.w                   #200,d7
                         ; -- if (d7 < 200)
@@ -64,7 +64,7 @@ PhsFadeToEndUpdate:
                         move.l                  #PhsMenuRedraw,PtrNextRedraw
                         bra.s                   .thatsAll
                         ; ========
-                        ; -- update Fend.Count
+                        ; -- update Fend_Count
 .doUpdate               addq.w                  #8,d7
                         move.w                  d7,(a6)
                         ; ========
@@ -75,10 +75,10 @@ PhsFadeToEndUpdate:
 PhsFadeToEndRedraw:
                         ;rts
                         ; -- Check that we are still inside the memory of the screen
-                        ; a6 := Fend.PtrStartToRedraw
-                        DerefPtrToPtr           Fend.PtrStartToRedraw,a6
-                        ; a4 := Fend.PtrEndToRedraw
-                        DerefPtrToPtr           Fend.PtrEndToRedraw,a4
+                        ; a6 := Fend_PtrStartToRedraw
+                        DerefPtrToPtr           Fend_PtrStartToRedraw,a6
+                        ; a4 := Fend_PtrEndToRedraw
+                        DerefPtrToPtr           Fend_PtrEndToRedraw,a4
                         cmp.l                   a4,a6
                         ; -- if (a4 <= a6)
                         bhs.s                   .thatsAll
@@ -86,14 +86,14 @@ PhsFadeToEndRedraw:
                         ; d7 : loop over 8 lines
                         move.w                  #7,d7
                         ; -- clear d0-d6,a0
-                        ; a4 := Fend.ZeroBuffer
-                        lea                     Fend.ZeroBuffer,a4
+                        ; a4 := Fend_ZeroBuffer
+                        lea                     Fend_ZeroBuffer,a4
                         movem.l                 (a4)+,d0-d6/a0
                         ; a4 := End of memory to clear = a6 + 8*160
                         lea                     1280(a6),a4
-                        ; -- update Fend.PtrStartToRedraw
-                        ; a3 := Fend.PtrStartToRedraw location
-                        lea                     Fend.PtrStartToRedraw,a3
+                        ; -- update Fend_PtrStartToRedraw
+                        ; a3 := Fend_PtrStartToRedraw location
+                        lea                     Fend_PtrStartToRedraw,a3
                         move.l                  a4,(a3)
                         ; -- do the clearing line by line = 5 * (8 * 4 = 32bytes per movem)
 .nextLine               movem.l                 d0-d6/a0,-(a4)
@@ -116,10 +116,10 @@ PhsFadeToEndAfterAll:
 ; ================================================================================================================
 ; Model
 ; ================================================================================================================
-Fend.Count              dc.w                    0                       ; line counter for erased lines
-Fend.PtrStartToRedraw   dc.l                    0                       ; pointer to start of memory to clear
-Fend.PtrEndToRedraw     dc.l                    0                       ; End of memory screen
-Fend.ZeroBuffer         ds.l                    8                       ; buffer of zero to clear registers to movem
+Fend_Count              dc.w                    0                       ; line counter for erased lines
+Fend_PtrStartToRedraw   dc.l                    0                       ; pointer to start of memory to clear
+Fend_PtrEndToRedraw     dc.l                    0                       ; End of memory screen
+Fend_ZeroBuffer         ds.l                    8                       ; buffer of zero to clear registers to movem
 ; ================================================================================================================
 ; ================================================================================================================
 ; ================================================================================================================

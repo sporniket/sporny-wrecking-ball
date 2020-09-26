@@ -23,42 +23,37 @@
 ; Macros for this phase
 ; ----------------------------------------------------------------------------------------------------------------
 PosModelToStatusMatrix  macro
-                        ; finds the address, value, bit in the bricks status bitmap from the given coordinates.
-                        ; 1 - data register containing the x value (byte)
-                        ; 2 - data register containing the y value (byte)
+                        ; finds the address, value in the bricks list from the given coordinates.
+                        ; 1 - data register containing the x value (byte) of the cell
+                        ; 2 - data register containing the y value (byte) of the cell
                         ; 3 - address register of the status matrix
-                        ; 4 - spare address register to do the work (side effect)
-                        ; 5 - spare data register to do the work ( => byte of the status matrix)
-                        ; 6 _ spare data register to do the work ( => bit of \5 to test)
-                        cmp.b                   #5,\2
+                        ; 4 - spare address register to do the work
+                        ; 5 - spare data register to do the work ( => word value of the cell)
+                        cmp.b                   #10,\2
                         bpl.s                   .outOfRange\@            ; is \2 >= 5 ?
                         ; -- else in range
-                        ; \5 := line byte offset = y * 5 = (y * 4) + (y) = (\2 * 4) + (\2)
+                        ; \5 := y*8 = \2 << 3
+                        ; \4 := line byte offset = 2*(y * 5 * 8) = 2*((8y * 4) + (8y)) = 2*((\4 * 4) + (\4))
                         moveq                   #0,\5
                         move.b                  \2,\5
-                        WdMul4                  \5
-                        add.b                   \2,\5
+                        lsl.w                   #3,\5
+                        move.l                  #0,\4
+                        move.w                  \5,\4
+                        WdMul4                  \4
+                        add.w                   \5,\4
+                        WdMul2                  \4
                         ; \4 := address of the start of line = \3 + \5
-                        move.l                  \3,\4
-                        add.l                   \5,\4
-                        ; \5 := x
+                        add.l                   \3,\4
+                        ; \5 := byte offset to x = 2*x
                         moveq                   #0,\5
                         move.b                  \1,\5
-                        ; \6 := bit to test = $7 - (\5 mod 8) = not (\5 & %111) & %111 (keep 3 ls bits)
-                        moveq                   #0,\6
-                        move.b                  \5,\6
-                        and.b                   #7,\6
-                        not.b                   \6
-                        and.b                   #7,\6
-                        ; \5 := cell to byte offset = \5 / 8 = \5 >> 3
-                        lsr.b                   #3,\5
+                        WdMul2                  \5
                         ; \4 := address of the status matrix value
                         add.l                   \5,\4
                         ; \5 := byte of the status matrix
-                        move.b                  (\4),\5
+                        move.w                  (\4),\5
                         bra.s                   .done\@
 .outOfRange\@           moveq                   #0,\5
-                        moveq                   #0,\6
 .done\@                  ; ========
                         endm
 ;
@@ -69,9 +64,8 @@ TstModelToStatusMatrix  macro
                         ; 3 - address register of the status matrix
                         ; 4 - spare address register to do the work (side effect)
                         ; 5 - spare data register to do the work ( => byte of the status matrix)
-                        ; 6 _ spare data register to do the work ( => bit of \5 to test)
-                        PosModelToStatusMatrix  \1,\2,\3,\4,\5,\6
-                        btst.b                  \6,\5
+                        PosModelToStatusMatrix  \1,\2,\3,\4,\5
+                        tst.w                   \5
                         endm
 ;
 PosToFreedomMatrix      macro
@@ -97,16 +91,16 @@ PosToFreedomMatrix      macro
                         add.l                   \5,\4
                         ; \5 := x to byte offset in line = \1 / 8 = \1 >> 3
                         move.w                  \1,\5
+                        and.w                   #$ff,\5
                         lsr.w                   #3,\5
                         ; \4 := address of the freedom matrix byte to test
                         add.l                   \5,\4
                         ; \5 := byte of the status matrix
                         move.b                  (\4),\5
-                        ; \6 := bit to test = $7 - (\1 mod 8) = not (\1 & %111) & %111 (keep 3 low bits)
+                        ; \6 := bit to test = $7 - (\1 mod 8) = not (\1) & %111 (keep 3 low bits)
                         move.b                  \1,\6
-                        and.b                   #7,\6
                         not.b                   \6
-                        and.b                   #7,\6
+                        and.l                   #7,\6
                         bra.s                   .done\@
 .outOfRange\@           moveq                   #0,\5
                         moveq                   #0,\6
@@ -179,7 +173,7 @@ DoSoundBallRebound      macro
 ;
 
 ;
-DoBlitPlayer            macro
+DoBlitPlayerFirst       macro
                         ; - 1 address to the sprite data
                         ; - 2 address to the start of memory screen to update
                         ; - 3 shift to the right
@@ -188,37 +182,51 @@ DoBlitPlayer            macro
                         ; - 6 spare data register
                         ; --
                         ; \4 := blitter base
-                        move.l                  #BlitterBase,\4
+                        move.w                  #2,(\4)+
                         ; -- Setup Source
-                        ; \5 := base + $20
-                        lea                     $20(\4),\5
-                        move.w                  #8,(\5)+ ; source x increment
-                        move.w                  #0,(\5)+ ; source y increment
-                        move.l                  \1,(\5)+ ; source address
+                        move.w                  #8,(\4)+ ; source x increment
+                        move.w                  #0,(\4)+ ; source y increment
+                        move.l                  \1,(\4)+ ; source address
                         ; -- setup masks
-                        ; \6 := $ffff0000 >> \3 = [endmask 1|endmask3]
-                        move.l                  #$ffff0000,\6
-                        lsr.l                   \3,\6
+                        ; \5 := $ffff0000 >> \3 = [endmask 1|endmask3]
+                        move.l                  #$ffff0000,\5
+                        lsr.l                   \3,\5
                         ; swap to put endmask1, swap again to put endmask3
-                        swap                    \6
-                        move.w                  \6,(\5)+
-                        move.w                  #$ffff,(\5)+
-                        swap                    \6
-                        move.w                  \6,(\5)+
+                        swap                    \5
+                        move.w                  \5,(\4)+
+                        move.w                  #$ffff,(\4)+
+                        swap                    \5
+                        move.w                  \5,(\4)+
                         ; -- setup Dest
-                        move.w                  #8,(\5)+
-                        move.w                  #128,(\5)+ ; 160 bytes - 4 * 8
-                        move.l                  \2,(\5)+
+                        move.w                  #8,(\4)+
+                        move.w                  #128,(\4)+ ; 160 bytes - 4 * 8
+                        move.l                  \2,(\4)+
                         ; -- setup x/y counts
-                        move.w                  #5,(\5)+
-                        move.w                  #8,(\5)+
+                        move.w                  #5,(\4)+
+                        move.w                  #8,(\4)+
                         ; -- Hop/op values
-                        move.w                  #$0203,(\5)+ ; HOP = 2 (source), OP = 3 (source)
+                        move.w                  #$0203,(\4)+ ; HOP = 2 (source), OP = 3 (source)
                         ; -- set skew/shift registers
-                        addq.l                  #1,\5
-                        move.b                  \3,(\5)
-                        ; -- do the blit
-                        DoBlitAndWait
+                        move.b                  #0,(\4)+
+                        move.b                  \3,(\4)+
+                        endm
+;
+
+;
+DoBlitPlayerNext        macro
+                        ; Append the blitting of the next bitplan.
+                        ; - 1 address to the sprite data
+                        ; - 2 address to the start of memory screen to update
+                        ; - 3 address of next blit item in the blitter list buffer
+                        ; --
+                        ; This is a blit item opcode 3
+                        move.w                  #3,(\3)+
+                        ; -- Setup Source
+                        move.l                  \1,(\3)+ ; source address
+                        ; -- setup Dest
+                        move.l                  \2,(\3)+
+                        ; -- setup x/y counts
+                        move.w                  #8,(\3)+
                         endm
 ;
                         ; -- use the blitter to display the player
@@ -226,116 +234,158 @@ DoBlitPlayer            macro
                         ; -- a2 : start of the memory screen to update
                         ; -- d1 : shift to do
                         ; -- a1, a0, d0 : spare register.
-ExecShowPlayer          DoBlitPlayer            a3,a2,d1,a1,a0,d0
+ExecShowPlayer
+                        ; a1 := start of blit list
+                        DerefPtrToPtr           MmHeapBase,a1
+                        lea                     HposBlitListBase(a1),a1
+                        ; -- setup PtrBlitterList
+                        ; a0 := PtrBlitterList
+                        move.l                  #PtrBlitterList,a0
+                        move.l                  a1,(a0)
+                        ; -- setup blit list
+                        ; d0 : spare register
+                        DoBlitPlayerFirst       a3,a2,d1,a1,d0
                         addq.l                  #2,a3
                         addq.l                  #2,a2
-                        DoBlitPlayer            a3,a2,d1,a1,a0,d0
+                        DoBlitPlayerNext        a3,a2,a1
                         addq.l                  #2,a3
                         addq.l                  #2,a2
-                        DoBlitPlayer            a3,a2,d1,a1,a0,d0
+                        DoBlitPlayerNext        a3,a2,a1
                         addq.l                  #2,a3
                         addq.l                  #2,a2
-                        DoBlitPlayer            a3,a2,d1,a1,a0,d0
+                        DoBlitPlayerNext        a3,a2,a1
+                        ; -- end of blit list
+                        move.w                  #0,(a1)+
+                        _Supexec                #BlitRunList
                         rts
 ;
 
 ;
-DoBlitBall              macro
+DoBlitBallFirst         macro
+                        ; Append the blitting of the first bitplan.
                         ; - 1 address to the sprite data
                         ; - 2 address to the start of memory screen to update
                         ; - 3 shift to the right
-                        ; - 4 spare address register
-                        ; - 5 spare address register
-                        ; - 6 spare data register
+                        ; - 4 address of next blit item in the blitter list buffer
+                        ; - 5 spare data register
                         ; --
-                        ; \4 := blitter base
-                        move.l                  #BlitterBase,\4
+                        ; This is a blit item opcode 2
+                        move.w                  #2,(\4)+
                         ; -- Setup Source
-                        ; \5 := base + $20
-                        lea                     $20(\4),\5
-                        move.w                  #8,(\5)+ ; source x increment
-                        move.w                  #0,(\5)+ ; source y increment
-                        move.l                  \1,(\5)+ ; source address
+                        move.w                  #8,(\4)+ ; source x increment
+                        move.w                  #0,(\4)+ ; source y increment
+                        move.l                  \1,(\4)+ ; source address
                         ; -- setup masks
                         ; \6 := $ffff0000 >> \3 = [endmask 1|endmask3]
-                        move.l                  #$f0000000,\6
-                        lsr.l                   \3,\6
+                        move.l                  #$f0000000,\5
+                        lsr.l                   \3,\5
                         ; swap to put endmask1, swap again to put endmask3
-                        swap                    \6
-                        move.w                  \6,(\5)+
-                        move.w                  #$ffff,(\5)+
-                        swap                    \6
-                        move.w                  \6,(\5)+
+                        swap                    \5
+                        move.w                  \5,(\4)+
+                        move.w                  #$ffff,(\4)+
+                        swap                    \5
+                        move.w                  \5,(\4)+
                         ; -- setup Dest
-                        move.w                  #8,(\5)+
-                        move.w                  #152,(\5)+ ; 160 bytes - 1 * 8
-                        move.l                  \2,(\5)+
+                        move.w                  #8,(\4)+
+                        move.w                  #152,(\4)+ ; 160 bytes - 1 * 8
+                        move.l                  \2,(\4)+
                         ; -- setup x/y counts
-                        move.w                  #2,(\5)+
-                        move.w                  #4,(\5)+
+                        move.w                  #2,(\4)+
+                        move.w                  #4,(\4)+
                         ; -- Hop/op values
-                        move.w                  #$0203,(\5)+ ; HOP = 2 (source), OP = 3 (source)
+                        move.w                  #$0203,(\4)+ ; HOP = 2 (source), OP = 3 (source)
                         ; -- set skew/shift registers
-                        addq.l                  #1,\5
-                        move.b                  \3,(\5)
-                        ; -- do the blit
-                        DoBlitAndWait
+                        move.b                  #0,(\4)+
+                        move.b                  \3,(\4)+
                         endm
 ;
-                        ; -- use the blitter to display the player
-                        ; -- a3 : start of the data of the player
+
+;
+DoBlitBallNext          macro
+                        ; Append the blitting of the next bitplan.
+                        ; - 1 address to the sprite data
+                        ; - 2 address to the start of memory screen to update
+                        ; - 3 address of next blit item in the blitter list buffer
+                        ; --
+                        ; This is a blit item opcode 3
+                        move.w                  #3,(\3)+
+                        ; -- Setup Source
+                        move.l                  \1,(\3)+ ; source address
+                        ; -- setup Dest
+                        move.l                  \2,(\3)+
+                        ; -- setup x/y counts
+                        move.w                  #4,(\3)+
+                        endm
+;
+                        ; -- use the blitter to display the ball
+                        ; -- a3 : start of the data of the ball
                         ; -- a2 : start of the memory screen to update
                         ; -- d1 : shift to do
                         ; -- a1, a0, d0 : spare register.
-ExecShowBall            DoBlitBall              a3,a2,d1,a1,a0,d0
+ExecShowBall
+                        ; a1 := start of blit list
+                        DerefPtrToPtr           MmHeapBase,a1
+                        lea                     HposBlitListBase(a1),a1
+                        ; -- setup PtrBlitterList
+                        ; a0 := PtrBlitterList
+                        move.l                  #PtrBlitterList,a0
+                        move.l                  a1,(a0)
+                        ; -- setup blit list
+                        ; d0 : spare register
+                        DoBlitBallFirst         a3,a2,d1,a1,d0
                         addq.l                  #2,a3
                         addq.l                  #2,a2
-                        DoBlitBall              a3,a2,d1,a1,a0,d0
+                        DoBlitBallNext          a3,a2,a1
                         addq.l                  #2,a3
                         addq.l                  #2,a2
-                        DoBlitBall              a3,a2,d1,a1,a0,d0
+                        DoBlitBallNext          a3,a2,a1
                         addq.l                  #2,a3
                         addq.l                  #2,a2
-                        DoBlitBall              a3,a2,d1,a1,a0,d0
+                        DoBlitBallNext          a3,a2,a1
+                        ; -- end of blit list
+                        move.w                  #0,(a1)+
+                        _Supexec                #BlitRunList
                         rts
 ;
 
-
-ExecSoundGetReady
-                        DmaSound_playOnce       #SndGetReadyBase,#SndGetReadyTop,a0,d1,d0
-                        rts
-;
-ExecSoundOhNo
-                        DmaSound_playOnce       #SndOhNoBase,#SndOhNoTop,a0,d1,d0
-                        rts
-;
-ExecSoundGameOver
-                        DmaSound_playOnce       #SndGameOverBase,#SndGameOverTop,a0,d1,d0
-                        rts
-;
-ExecSoundGameClear
-                        DmaSound_playOnce       #SndYouWonBase,#SndYouWonTop,a0,d1,d0
-                        rts
+ExecSound               macro
+                        ; Execute the playing of the given dma sound description
+                        ; 1 - the pointer to the descriptor of the dma sound.
+                        ; 2 - spare address register
+                        ; --
+                        move.l                  #DmaSound_PtrDesc,\2
+                        move.l                  \1,(\2)
+                        _Supexec                #DmaSound_playOnce
+                        endm
 ;
 
 ; ----------------------------------------------------------------------------------------------------------------
 ; before all
 ; ----------------------------------------------------------------------------------------------------------------
 PhsGameBeforeAll:       ; ========
+                        ; -- setup sound descriptors
+                        ; a6 := ptr to each structur
+                        move.l                  #Game_sndGetReady,a6
+                        DmaSound_setupSound     #SndGetReadyBase,#SndGetReadyTop,#DmaSound_MONO_6,a6
+                        move.l                  #Game_sndOhNo,a6
+                        DmaSound_setupSound     #SndOhNoBase,#SndOhNoTop,#DmaSound_MONO_6,a6
+                        move.l                  #Game_sndGameOver,a6
+                        DmaSound_setupSound     #SndGameOverBase,#SndGameOverTop,#DmaSound_MONO_6,a6
+                        move.l                  #Game_sndGameClear,a6
+                        DmaSound_setupSound     #SndYouWonBase,#SndYouWonTop,#DmaSound_MONO_6,a6
                         ; -- setup pointer to BrickStatus
                         ; a6 := Storage of the pointer
                         move.l                  #PtrBrickStatusMatrix,a6
-                        ; d7 := Ptr address
-                        move.l                  MmHeapBase,d7
-                        add.l                   #HposBrickBase,d7
-                        move.l                  d7,(a6)
+                        ; a5 := Ptr current level
+                        SetupHeapAddress        HposCurrentLvlBase,a5
+                        lea                     Level_Bricks(a5),a5
+                        move.l                  a5,(a6)
                         ; -- setup pointer to BallFreedom
                         ; a6 := Storage of the pointer
                         move.l                  #PtrBallFreedomMatrix,a6
-                        ; d7 := Ptr address
-                        move.l                  MmHeapBase,d7
-                        add.l                   #HposFreedomBase,d7
-                        move.l                  d7,(a6)
+                        ; a5 := Ptr address
+                        SetupHeapAddress        HposFreedomBase,a5
+                        move.l                  a5,(a6)
                         ; -- setup brick sprite vectors : even
                         ; a6 := Ptr to vector
                         move.l                  #SprVcBrickEven,a6
@@ -361,27 +411,67 @@ PhsGameBeforeAll:       ; ========
 ; before each
 ; ----------------------------------------------------------------------------------------------------------------
 PhsGameBeforeEach:      ; ========
-                        ; -- init the brick status bit field
-                        ; a6 := ptr to grid status matrix
-                        DerefPtrToPtr           PtrBrickStatusMatrix,a6
-                        ; -- set all bits to 1 over 25 bytes = 6 long + 1 byte
-                        rept                    6
-                        move.l                  #$ffffffff,(a6)+
-                        endr
-                        move.b                  #$ff,(a6)
                         ; ========
                         ; -- init the freedom matrix with brick occupation
                         ; a6 := ptr to the freedom matrix
                         DerefPtrToPtr           PtrBallFreedomMatrix,a6
-                        ; -- 10 lines occupied by bricks = 100 bytes = (4 * 25) = 25 long
-                        rept                    25
-                        move.l                  #$ffffffff,(a6)+
+                        ; a5 := ptr to grid status matrix
+                        DerefPtrToPtr           PtrBrickStatusMatrix,a5
+                        ; -- 20 lines occupied by bricks = 20 * 80 cells = 20 * 10 bytes = 200 bytes, to be filled by scanning the bricks
+                        ; a4 := ptr to dest even rows
+                        move.l                  a6,a4
+                        ; a3 := ptr to dest odd rows = even row + 10
+                        move.l                  a6,a3
+                        add.l                   #10,a3
+                        ; clear d7
+                        moveq                   #0,d7
+                        ; d5..d2 := brushes for filling dest byte
+                        moveq                   #0,d5
+                        rept 10 ; 10 lines of bricks
+                        rept 10 ; 10 groups of 4 bricks
+                        ; d6 := next value for dest (even and odd)
+                        moveq                   #0,d6
+                        ; -- brick 1 of 4
+                        ; d7 := brick value
+                        ; d5 := brush to use
+                        move.w                  (a5)+,d7
+                        tst.w                   d7
+                        AssignVaElseVbTo        eq,#0,#%11000000,b,d5
+                        or.b                    d5,d6
+                        ; -- brick 2 of 4
+                        ; d7 := brick value
+                        ; d5 := brush to use
+                        move.w                  (a5)+,d7
+                        tst.w                   d7
+                        AssignVaElseVbTo        eq,#0,#%110000,b,d5
+                        or.b                    d5,d6
+                        ; -- brick 3 of 4
+                        ; d7 := brick value
+                        ; d5 := brush to use
+                        move.w                  (a5)+,d7
+                        tst.w                   d7
+                        AssignVaElseVbTo        eq,#0,#%1100,b,d5
+                        or.b                    d5,d6
+                        ; -- brick 4 of 4
+                        ; d7 := brick value
+                        ; d5 := brush to use
+                        move.w                  (a5)+,d7
+                        tst.w                   d7
+                        AssignVaElseVbTo        eq,#0,#%11,b,d5
+                        or.b                    d5,d6
+                        ; -- assign byte to dest
+                        move.b                  d6,(a4)+
+                        move.b                  d6,(a3)+
                         endr
-                        ; -- 40 lines occupied by nothing = 400 bytes = 4 * 100 bytes
-                        ; d7 := loop counter
-                        move.w                  #3,d7
+                        ; -- next line -> skip one line for even and odd pointers
+                        lea                     10(a4),a4
+                        lea                     10(a3),a3
+                        endr
+                        ; -- 30 lines occupied by nothing = 30 * 80 cells = 30 * 10 bytes = 300 bytes = 75 long
+                        ; d7 := loop counter, 3 times
+                        move.w                  #2,d7
 .doFillFreedom          rept                    25
-                        move.l                  #0,(a6)+
+                        move.l                  #0,(a4)+
                         endr
                         dbf.s                   d7,.doFillFreedom
                         ; ========
@@ -404,7 +494,7 @@ PhsGameBeforeEach:      ; ========
                         move.b                  #200,0(a6)
                         ; ========
                         ; -- Introductory sound
-                        _Supexec                #ExecSoundGetReady
+                        ExecSound               #Game_sndGetReady,a5
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; update
@@ -468,7 +558,8 @@ PhsGameUpdate:
                         ; -- else game over
                         move.b                  #0,4(a6)
                         ; -- play "game over" sound
-                        _Supexec                #ExecSoundGameOver
+                        ; a4 := spare register
+                        ExecSound               #Game_sndGameOver,a4
                         ; -- game over, return
                         rts
                         ; -- decrease remaining ball, init ball position and freeze
@@ -476,7 +567,8 @@ PhsGameUpdate:
                         ; -- update remaining ball
                         move.b                  d4,9(a5)
                         ; -- play "oh no"
-                        _Supexec                #ExecSoundOhNo
+                        ; a4 := spare register
+                        ExecSound               #Game_sndOhNo,a4
                         ; -- init ball position and freeze (copy from before each)
                         ; a4 := ptr to the ball
                         move.l                  a5,a4
@@ -563,9 +655,8 @@ PhsGameUpdate:
                         ; -- 2. (x, next y)
                         ; -- 3. (next x, y)
                         ; -- Then store each test in d5 : ...312yx
-                        ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
-                        bclr.l                  #3,d5
                         ; -- test 1
+                        ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
                         TstPosToFreedomMatrix   d6,d3,a4,a3,d2,d1
                         ; if position is free
                         beq.s                   .tstFreedom2
@@ -573,7 +664,6 @@ PhsGameUpdate:
                         bset.l                  #3,d5
 .tstFreedom2            ; ========
                         ; -- test 2
-                        bclr.l                  #2,d5
                         ; d0 := x
                         move.b                  0(a5),d0
                         ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
@@ -584,7 +674,6 @@ PhsGameUpdate:
                         bset.l                  #2,d5
 .tstFreedom3            ; ========
                         ; -- test 3
-                        bclr.l                  #4,d5
                         ; d0 := y
                         move.b                  1(a5),d0
                         ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
@@ -618,10 +707,11 @@ PhsGameUpdate:
                         dbf.s                   d1,.processBallReboundY
                         ; -- d1 : case 0
                         ; -- do rebound x if bit 2 of d2 set or d2 == 2
-                        btst.l                  #2,d2
+                        ; d0 := d2 & %110 (6), nothing to do if 0
+                        moveq                   #0,d0
+                        move.b                  d2,d0
+                        and.b                   #6,d0
                         beq.w                   .commitBall
-                        cmp.b                   #2,d2
-                        bne.w                   .commitBall
 .doBallReboundX         ; ========
                         ; d7 := -d7
                         neg.b                   d7
@@ -634,12 +724,10 @@ PhsGameUpdate:
 .processBallReboundY    ; -- switch (d1)
                         dbf.s                   d1,.processBallReboundXY
                         ; -- d1 : case 1
-                        ; -- do NOT rebound y if d2 in [0,4,7]
-                        tst.l                   d2
-                        beq.w                   .commitBall
-                        cmp.b                   #4,d2
-                        beq.w                   .commitBall
-                        cmp.b                   #7,d2
+                        ; d0 := d2 & %11 (3), nothing to do if 0
+                        moveq                   #0,d0
+                        move.b                  d2,d0
+                        and.b                   #3,d0
                         beq.w                   .commitBall
 .doBallReboundY         ; ========
                         ; -- special behaviour if collision against the paddle
@@ -651,6 +739,7 @@ PhsGameUpdate:
                         ; -- if next y out of the paddle area
                         bmi.s                   .doBallReboundYReally
                         ; -- else collision against the player bumper, need x
+                        ; FIXME : when it happens on the border of the screen (left or right), cannot force dx !!
                         ; a3 := PlayerBumper
                         lea                     PlayerBumper,a3
                         ; d0 := -(bumper.x - (next x - dx)) = -bumper.x + next x - dx
@@ -875,12 +964,12 @@ PhsGameUpdate:
                         ; if d4 != ...010..
                         bne.s                   .tryBrickEraseAlongX
                         ; -- else the unique brick to erase will be at nextx, nexty
-                        ; a2,d2,d1 := spare register for the macro
-                        TstModelToStatusMatrix  d7,d6,a3,a2,d2,d1
+                        ; a2,d2 := spare register for the macro
+                        TstModelToStatusMatrix  d7,d6,a3,a2,d2
                         ; -- if no brick
                         beq.w                   .cleanupBrickSavedField
                         ; -- else erase brick and store in list
-                        bclr.b                  d1,(a2)
+                        move.w                  #0,(a2)
                         move.b                  d7,(a4)+
                         move.b                  d6,(a4)+
                         addq.b                  #1,d3
@@ -897,12 +986,12 @@ PhsGameUpdate:
                         beq.s                   .tryBrickEraseAlongY
                         ; use y
                         swap                    d6
-                        ; a2,d2,d1 := spare register for the macro
-                        TstModelToStatusMatrix  d7,d6,a3,a2,d2,d1
+                        ; a2,d2 := spare register for the macro
+                        TstModelToStatusMatrix  d7,d6,a3,a2,d2
                         ; -- if no brick
                         beq.s                   .tryBrickEraseAlongY
                         ; -- else erase brick and store in list
-                        bclr.b                  d1,(a2)
+                        move.w                  #0,(a2)
                         move.b                  d7,(a4)+
                         move.b                  d6,(a4)+
                         ; -- update and save item count
@@ -921,12 +1010,12 @@ PhsGameUpdate:
                         beq.s                   .cleanupBrickSavedField
                         ; use x
                         swap                    d7
-                        ; a2,d2,d1 := spare register for the macro
-                        TstModelToStatusMatrix  d7,d6,a3,a2,d2,d1
+                        ; a2,d2 := spare register for the macro
+                        TstModelToStatusMatrix  d7,d6,a3,a2,d2
                         ; -- if no brick
                         beq.s                   .cleanupBrickSavedField
                         ; -- else erase brick and store in list
-                        bclr.b                  d1,(a2)
+                        move.w                  #0,(a2)
                         move.b                  d7,(a4)+
                         move.b                  d6,(a4)+
                         ; -- update and save item count
@@ -941,7 +1030,8 @@ PhsGameUpdate:
                         ; -- if there are still some bricks to break
                         bhi.s                   .commitBrickCount
                         ; -- else game is cleared
-                        _Supexec                #ExecSoundGameClear
+                        ; a5 := spare register
+                        ExecSound               #Game_sndGameClear,a5
                         ; -- the game is over
                         ; a5 := ptr to the Game
                         lea                     TheGame,a5
@@ -1236,7 +1326,7 @@ PhsGameRedraw:          ; ========
                         lea                     DatSprtsPlayerBase(a3),a3
                         ; d1 := 0
                         moveq                   #0,d1
-                        _Supexec                #ExecShowPlayer
+                        bsr.w                   ExecShowPlayer
                         bra.s                   .doneDrawPlayer
 .drawPlayerOdd          ; ========
                         ; d3 := loop counter
@@ -1248,7 +1338,7 @@ PhsGameRedraw:          ; ========
                         lea                     DatSprtsPlayerBase(a3),a3
                         ; d1 := 0
                         moveq                   #8,d1
-                        _Supexec                #ExecShowPlayer
+                        bsr.w                   ExecShowPlayer
 .doneDrawPlayer         ; ========
                         ; -- done, commit model update
                         move.b                  4(a6),0(a6)
@@ -1378,7 +1468,7 @@ RedrawBall:
                         ; d1 := d6 * 4
                         move.w                  d6,d1
                         WdMul4                  d1
-                        _Supexec                #ExecShowBall
+                        bsr.w                   ExecShowBall
                         ; -- done, commit new coordinates
 .commitBall             move.b                  4(a6),0(a6)
                         move.b                  5(a6),1(a6)
@@ -1402,7 +1492,7 @@ RedrawBall:
                         lea                     DatSprtsBallBase(a3),a3
                         ; d1 := 0
                         move.w                  #0,d1
-                        _Supexec                #ExecShowBall
+                        bsr.w                   ExecShowBall
                         cmp.b                   #2,d7
                         ; -- if (d7 < 2)
                         bmi.s                   .thatsAll
@@ -1415,9 +1505,10 @@ RedrawBall:
                         lea                     DatSprtsBallBase(a3),a3
                         ; d1 := 8
                         move.w                  #8,d1
-                        _Supexec                #ExecShowBall
+                        bsr.w                   ExecShowBall
                         ; ========
-.thatsAll               rts
+.thatsAll
+                        rts
 ;
 ; ----------------------------------------------------------------------------------------------------------------
 ; after each
@@ -1433,7 +1524,7 @@ PhsGameAfterAll:
 ; ================================================================================================================
 ; Model
 ; ================================================================================================================
-; Brick status model : a bitmap, 40 bits = 5 bytes per line, 5 lines => 25 bytes
+; Brick status model : direct access to the cell array (1 word per cell)
 ; ================================================================================================================
 PtrBrickStatusMatrix    dc.l                    0
 ; ================================================================================================================
@@ -1477,9 +1568,14 @@ TheLevel:
                         dc.b                    0                       ; rebound status flag (...tttyx)
                         ; bricks to erase on screen
                         dc.b                    0                       ; number of bricks (0, 1 or 2)
-                        ds.b                    0,4                     ; buffer, bricks position in the bricks status model (col, row) , 2 bytes each
+                        ds.b                    4                       ; buffer, bricks position in the bricks status model (col, row) , 2 bytes each
                         even
 ; ================================================================================================================
+; Sound descriptors
+Game_sndGetReady        ds.b                    SIZEOF_DmaSound
+Game_sndGameOver        ds.b                    SIZEOF_DmaSound
+Game_sndGameClear       ds.b                    SIZEOF_DmaSound
+Game_sndOhNo        ds.b                    SIZEOF_DmaSound
 ; ================================================================================================================
 ; ================================================================================================================
 ; ================================================================================================================

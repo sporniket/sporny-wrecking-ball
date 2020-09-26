@@ -54,40 +54,46 @@ DoBlitPartialScreen     macro
                         ; - 2 address to the start of memory screen to update
                         ; - 3 number of lines
                         ; - 4 spare address register
-                        ; - 5 spare address register
-                        ; - 6 spare data register
                         ; --
                         ; y increment : after copying 1 full line (start + 160), go back to 9 lines before the start = 10 lines back = 1600 backwards
                         ; --
-                        ; \4 := blitter base
-                        move.l                  #BlitterBase,\4
+                        ; This is a blit item opcode 2
+                        move.w                  #2,(\4)+
                         ; -- Setup Source
-                        ; \5 := base + $20
-                        lea                     $20(\4),\5
-                        move.w                  #2,(\5)+                ; source x increment (contiguous)
-                        move.w                  #-1600,(\5)+            ; source y increment
-                        move.l                  \1,(\5)+                ; source address
+                        move.w                  #2,(\4)+                ; source x increment (contiguous)
+                        move.w                  #-1600,(\4)+            ; source y increment
+                        move.l                  \1,(\4)+                ; source address
                         ; -- setup masks
-                        move.w                  #$ffff,(\5)+
-                        move.w                  #$ffff,(\5)+
-                        move.w                  #0,(\5)+
+                        move.w                  #$ffff,(\4)+
+                        move.w                  #$ffff,(\4)+
+                        move.w                  #0,(\4)+
                         ; -- setup Dest
-                        move.w                  #2,(\5)+
-                        move.w                  #-1600,(\5)+
-                        move.l                  \2,(\5)+
+                        move.w                  #2,(\4)+
+                        move.w                  #-1600,(\4)+
+                        move.l                  \2,(\4)+
                         ; -- setup x/y counts
-                        move.w                  #80,(\5)+
-                        move.w                  \3,(\5)+
+                        move.w                  #80,(\4)+
+                        move.w                  \3,(\4)+
                         ; -- Hop/op values
-                        move.w                  #$0203,(\5)+ ; HOP = 2 (source), OP = 3 (source)
+                        move.w                  #$0203,(\4)+ ; HOP = 2 (source), OP = 3 (source)
                         ; -- set skew/shift registers
-                        addq.l                  #1,\5
-                        move.b                  #0,(\5)
-                        ; -- do the blit
-                        DoBlitAndWait
+                        move.w                  #0,(\4)+
                         endm
 ;
-ExecBlitPartialScreen   DoBlitPartialScreen     a4,a3,d6,a2,a1,d5
+ExecBlitPartialScreen
+                        ; a1 := start of blit list
+                        DerefPtrToPtr           MmHeapBase,a1
+                        lea                     HposBlitListBase(a1),a1
+                        ; -- setup PtrBlitterList
+                        ; a0 := PtrBlitterList
+                        move.l                  #PtrBlitterList,a0
+                        move.l                  a1,(a0)
+                        ; -- setup blit list
+                        ; d0 : spare register
+                        DoBlitPartialScreen     a4,a3,d6,a1,d5
+                        ; -- end of blit list
+                        move.w                  #0,(a1)+
+                        _Supexec                #BlitRunList
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; before all
@@ -152,10 +158,10 @@ PhsMenuUpdate:
                         ; a2 := address to jump to
                         move.l                  #PhsMenuAfterEach,a2
                         jsr                     (a2)
-                        move.l                  #PhsFadeToGameBeforeEach,a2
+                        move.l                  #PhsInitLevelBeforeEach,a2
                         jsr                     (a2)
-                        move.l                  #PhsFadeToGameUpdate,PtrNextUpdate
-                        move.l                  #PhsFadeToGameRedraw,PtrNextRedraw
+                        move.l                  #PhsInitLevelUpdate,PtrNextUpdate
+                        move.l                  #PhsInitLevelRedraw,PtrNextRedraw
                         bra.w                   .thatsAll
                         ; select phase -- case not 1
 .waitFireRelease        dbf.s                   d7,.waitFirePress
@@ -276,7 +282,7 @@ PhsMenuRedraw:
                         move.l                  Menu_PtrStartToRedraw(a6),a3
                         ; d6 := count lines to redraw
                         move.w                  Menu_BlitCountY(a6),d6
-                        _Supexec                #ExecBlitPartialScreen
+                        bsr.w                   ExecBlitPartialScreen
                         ; -- commit next step
                         ; d5 := temp reg
                         move.w                  Menu_Count_Next(a6),d5
