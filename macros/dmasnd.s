@@ -58,8 +58,8 @@ DmaSound_doPlayOnce     macro
                         move.l                  #$ffff890e,\3
                         move.l                  \2,\4
                         DmaSound_setupFrame     \3,\4,\5
-                        ; -- setup mono 6xxx Hz
-                        move.w                  #$0080,$ffff8920
+                        ; -- setup mono 12xxx Hz
+                        move.b                  #$81,$ffff8921
                         ; -- play once
                         move.w                  #$0001,$ffff8900
                         endm

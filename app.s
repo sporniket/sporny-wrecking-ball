@@ -24,6 +24,9 @@ HposFreedomTop          rs.b                    0
 ; Blitter list : 2*(70 bytes (= 1 blit item 2 + 3 blit items 3) + 912 bytes (= 19 x 4 blit item 3)) + 2 bytes (terminator)
 HposBlitListBase        rs.b                    1966
 HposBlitListTop         rs.b                    0
+; Game state
+HposGameStateBase       rs.b                    SIZEOF_GameState
+HposGameStateTop        rs.b                    0
 ; Level currently being played
 HposCurrentLvlBase      rs.b                    SIZEOF_Level
 HposCurrentLvlTop       rs.b                    0
@@ -217,6 +220,13 @@ SpritesPlayerDat:       incbin                  'assets/spr_padl.dat'
 ;
 ;
 SpritesLinesDat:        incbin                  'assets/spr_line.dat'
+                        incbin                  'assets/spr_line.dat'
+                        incbin                  'assets/spr_line.dat'
+                        incbin                  'assets/spr_line.dat'
+                        incbin                  'assets/spr_line.dat'
+                        incbin                  'assets/spr_line.dat'
+                        incbin                  'assets/spr_line.dat'
+                        incbin                  'assets/spr_line.dat'
                         even
 ;
 TitleDat:               incbin                  'assets/title.pi1'
@@ -244,6 +254,9 @@ SndYouWonBase           incbin                  'assets/s_yuwon.dat'
                         even
 SndYouWonTop            dc.w                    0
 ; ================================================================================================================
+                        even
+                        include                 'includes/offs_tbl.s'
+                        include                 'includes/vals_tbl.s'
 ; ================================================================================================================
 ; ================================================================================================================
 ; ================================================================================================================

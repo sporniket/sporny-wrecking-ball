@@ -46,6 +46,14 @@ Terminate               macro
                         MouseOn
                         ___gemdos               0,0
                         endm
+;
+;
+SetupAbnormalTerm       macro
+                        move.l                  #HastilyTerminateHandler,-(sp)
+                        move.w                  #258,-(sp)
+                        ___bios                 5,8
+                        endm
+
 ; ================================================================================================================
 
 ; ================================================================================================================
@@ -54,7 +62,7 @@ Terminate               macro
                         ; ========
                         ; TPA management
                         move.l                  4(sp),MmBasepage
-                        ShrinkTpa               4096,12288              ;1/4 stack, 3/4 heap
+                        ShrinkTpa               4096,SIZEOF_HEAP_ACTUAL              ;4kB stack + strictly necessary heap
                         tst.l                   d0
                         beq.s                   CanStart
                         cmp.l                   #-39,d0
@@ -112,6 +120,8 @@ CanStart:               ; --------
                         dbf.s                   d7,.nextAppColor
                         ; ========
                         _Setpalette             appPalette
+                        ; -- prepare to quit abruptly
+                        SetupAbnormalTerm
                         ; proceed to the app
                         bsr.w                   BodyOfApp
 
@@ -338,6 +348,19 @@ HandlerBusError:
                         ; that's all
 BuggyReturn:
                         rts
+
+HastilyTerminateHandler:
+                        RestoreSysIkbdHandler   BufferSysIkbdvbase,BufferSysJoystckHandlr,a0
+                        RestoreSavedPalette     BufferSysPalette
+                        ; ========
+                        lea                     BufferSysState,a6
+                        move.w                  (a6)+,d7
+                        ChangeToRez             d7
+                        ; ========
+                        MouseOn
+                        ;
+                        rts
+
 ; ================================================================================================================
 ; Custom handlers
 ; ================================================================================================================
@@ -359,6 +382,7 @@ BufferJoystate          dc.w                    0
 ; ================================================================================================================
                         include                 'includes/fade_clr.s'
                         include                 'includes/mdl_levl.s'
+                        include                 'includes/game_stt.s'
                         include                 'app.s'
 ; ================================================================================================================
 ; Global data

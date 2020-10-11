@@ -219,14 +219,13 @@ PhsInitLevelBeforeEach:
                         ; TODO : Ptr to current level data, for now fixed
                         lea                     DatLevel0,a5
                         ; a4,d7,d6,d5,d4,d3 : spare registers
-                        Level_init_v0           a5,a6,a4,d7,d6,d5,d4,d3
+                        Level_init_v0           a5,a6,a4,d7,d6,d5,d4,d3,d2
                         ; -- init line counter
                         move.w                  #0,InitLevel_LvlLine
                         ; -- init ptr to cell
                         ; a3 : ptr to first cell
                         lea                     Level_Bricks(a6),a3
                         move.l                  a3,InitLevel_PtrCell
-                        move.l                  #$00314159,a3 ; magic number to debug in hatari
                         ;
                         ;
                         ; -- clear screen (workaround blitter glitch that cannot override some pixels during fade effect ???)

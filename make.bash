@@ -1,6 +1,6 @@
 #!/bin/bash
 AS="vasmm68k_mot"
-ASARGS="-Ftos -devpac -warncomm -ldots -opt-allbra"
+ASARGS="-Ftos -devpac -warncomm -opt-allbra -nomsg=2054"
 TARGETNAME="swb"
 TARGETDIR="$(pwd)/build"
 TARGETPRG="${TARGETNAME}.prg"

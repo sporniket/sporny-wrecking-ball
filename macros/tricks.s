@@ -31,3 +31,17 @@ WdMul4                  macro
                         WdMul2                  \1
                         WdMul2                  \1
                         endm
+
+; ================================================================================================================
+; Multiply by a power of 2 -- long -- BEWARE OF OVERFLOWS
+;
+LgMul2                  macro
+                        ; 1 - data register to double
+                        add.l                   \1,\1
+                        endm
+
+LgMul4                  macro
+                        ; 1 - register to double
+                        LgMul2                  \1
+                        LgMul2                  \1
+                        endm

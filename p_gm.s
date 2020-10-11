@@ -30,7 +30,7 @@ PosModelToStatusMatrix  macro
                         ; 4 - spare address register to do the work
                         ; 5 - spare data register to do the work ( => word value of the cell)
                         cmp.b                   #10,\2
-                        bpl.s                   .outOfRange\@            ; is \2 >= 5 ?
+                        bpl                     .outOfRange\@            ; is \2 >= 5 ?
                         ; -- else in range
                         ; \5 := y*8 = \2 << 3
                         ; \4 := line byte offset = 2*(y * 5 * 8) = 2*((8y * 4) + (8y)) = 2*((\4 * 4) + (\4))
@@ -52,7 +52,7 @@ PosModelToStatusMatrix  macro
                         add.l                   \5,\4
                         ; \5 := byte of the status matrix
                         move.w                  (\4),\5
-                        bra.s                   .done\@
+                        bra                     .done\@
 .outOfRange\@           moveq                   #0,\5
 .done\@                  ; ========
                         endm
@@ -78,7 +78,7 @@ PosToFreedomMatrix      macro
                         ; 6 _ spare data register => bit of \5 to test
                         cmp.b                   #50,\2
                         ; -- if \2 >= 50
-                        bpl.s                   .outOfRange\@
+                        bpl                     .outOfRange\@
                         ; -- else in range
                         ; \5 := line byte offset = y * 10 = (y * 8) + y + y = y << 3 + y + y
                         moveq                   #0,\5
@@ -101,7 +101,7 @@ PosToFreedomMatrix      macro
                         move.b                  \1,\6
                         not.b                   \6
                         and.l                   #7,\6
-                        bra.s                   .done\@
+                        bra                     .done\@
 .outOfRange\@           moveq                   #0,\5
                         moveq                   #0,\6
 .done\@
@@ -120,6 +120,10 @@ TstPosToFreedomMatrix   macro
                         btst.l                   \6,\5
                         endm
 ;
+;
+Game_eraseTiles
+;
+;
 
 WhenHalfSpeedSkipOrGo   macro
                         ; Check whether the ball is at half speed and disable the ball updating when at the off phase
@@ -128,16 +132,16 @@ WhenHalfSpeedSkipOrGo   macro
                         ; 3 - branch destination when the update should be disabled
                         ; -- check halfspeed status
                         ; \2 := halfspeed phase
-                        move.b                  7(\1),\2
+                        move.b                  GameState_Ball_hlfPhs(\1),\2
                         tst.b                   \2
                         ; -- if \2 == 0
-                        beq.s                   .continue\@
+                        beq                     .continue\@
                         ; -- else check whether halfspeed is enabled
                         ; \2 := halfspeed enable
-                        move.b                  6(\1),\2
+                        move.b                  GameState_Ball_hlfSpd(\1),\2
                         tst.b                   \2
                         ; -- if halfspeed is disabled
-                        beq.w                   \3
+                        beq                     \3
 .continue\@             ; ========
                         endm
 
@@ -236,8 +240,7 @@ DoBlitPlayerNext        macro
                         ; -- a1, a0, d0 : spare register.
 ExecShowPlayer
                         ; a1 := start of blit list
-                        DerefPtrToPtr           MmHeapBase,a1
-                        lea                     HposBlitListBase(a1),a1
+                        SetupHeapAddress        HposBlitListBase,a1
                         ; -- setup PtrBlitterList
                         ; a0 := PtrBlitterList
                         move.l                  #PtrBlitterList,a0
@@ -324,8 +327,7 @@ DoBlitBallNext          macro
                         ; -- a1, a0, d0 : spare register.
 ExecShowBall
                         ; a1 := start of blit list
-                        DerefPtrToPtr           MmHeapBase,a1
-                        lea                     HposBlitListBase(a1),a1
+                        SetupHeapAddress        HposBlitListBase,a1
                         ; -- setup PtrBlitterList
                         ; a0 := PtrBlitterList
                         move.l                  #PtrBlitterList,a0
@@ -348,6 +350,62 @@ ExecShowBall
                         rts
 ;
 
+;
+DoBlitClrBrickFirst     macro
+                        ; Append the first blitting that erase a whole brick (top half).
+                        ; - 1 address to the sprite data
+                        ; - 2 address to the start of memory screen to update
+                        ; - 3 address of next blit item in the blitter list buffer
+                        ; - 4 data register [mask 1|mask 3]
+                        ; - 5 destination y increment
+                        ; - 6 x count
+                        ; --
+                        ; This is a blit item opcode 2
+                        move.w                  #2,(\3)+
+                        ; -- Setup Source
+                        move.w                  #8,(\3)+ ; source x increment
+                        move.w                  #0,(\3)+ ; source y increment
+                        move.l                  \1,(\3)+ ; source address
+                        ; -- setup masks
+                        ; swap to put endmask1, swap again to put endmask3
+                        swap                    \4
+                        move.w                  \4,(\3)+
+                        move.w                  #$ffff,(\3)+
+                        swap                    \4
+                        move.w                  \4,(\3)+
+                        ; -- setup Dest
+                        move.w                  #8,(\3)+
+                        move.w                  \5,(\3)+
+                        move.l                  \2,(\3)+
+                        ; -- setup x/y counts
+                        move.w                  \6,(\3)+
+                        move.w                  #4,(\3)+
+                        ; -- Hop/op values
+                        move.w                  #$0203,(\3)+ ; HOP = 2 (source), OP = 3 (source)
+                        ; -- set skew/shift registers
+                        move.b                  #0,(\3)+
+                        move.b                  #0,(\3)+
+                        endm
+;
+
+;
+DoBlitClrBrickNext      macro
+                        ; Append the next blitting that erase a whole brick (bottom half).
+                        ; - 1 address to the sprite data
+                        ; - 2 address to the start of memory screen to update
+                        ; - 3 address of next blit item in the blitter list buffer
+                        ; --
+                        ; This is a blit item opcode 3
+                        move.w                  #3,(\3)+
+                        ; -- Setup Source
+                        move.l                  \1,(\3)+
+                        ; -- setup Dest
+                        move.l                  \2,(\3)+
+                        ; -- setup y counts
+                        move.w                  #4,(\3)+
+                        endm
+;
+
 ExecSound               macro
                         ; Execute the playing of the given dma sound description
                         ; 1 - the pointer to the descriptor of the dma sound.
@@ -358,6 +416,83 @@ ExecSound               macro
                         _Supexec                #DmaSound_playOnce
                         endm
 ;
+; ----------------------------------------------------------------------------------------
+; macro to manage bricks
+;
+Game_scanBrkToDelete  macro
+                        ; find the extends of the deletion to do
+                        ; \1 - pointer to the initial cell
+                        ; \2 - value of the initial cell
+                        ; \3 - col of the initial cell => col of the leftmost cell to delete
+                        ; \4 - spare address register => pointer to last cell to clear (excluded)
+                        ; \5 - spare data register => number of cells to delete
+                        ; \6 - spare data register
+                        ; \7 - spare address register => pointer to first cell to clear
+                        ; --
+                        ; \5 := extends of the bricks (number of tiles)
+                        moveq                   #1,\5
+                        ; -- scan to the left first
+                        ; \7 := init cursor to next cell (take predecrement into account)
+                        move.l                  \1,\7
+                        btst.w                  #9,\2
+                        bne                     .doneLeft\@
+.nextLeft\@
+                        ; update \5
+                        addq.b                  #1,\5
+                        ; update \3
+                        subq.b                  #1,\3
+                        ; \6 := cell value
+                        move.w                  -(\7),\6
+                        btst.w                  #9,\6
+                        beq                     .nextLeft\@
+.doneLeft\@
+                        ; \4 := init cursor to next cell (take postincrement into account)
+                        lea                     2(\1),\4
+                        btst.w                  #8,\2
+                        bne                     .doneScanToRight\@
+.nextRight\@
+                        ; update \5
+                        addq.b                  #1,\5
+                        ; \6 := cell value
+                        move.w                  (\4)+,\6
+                        btst.w                  #8,\6
+                        beq                     .nextRight\@
+.doneScanToRight\@
+                        endm
+;
+;
+RelaunchBall            macro
+                        ; Re-initialize the ball (new ball).
+                        ; 1 - Ptr to game state
+                        ; --
+                        move.b                  #$24,GameState_Ball_x(\1)
+                        move.b                  #$27,GameState_Ball_y(\1)
+                        ; dx := -1
+                        move.b                  #$ff,GameState_Ball_dx(\1)
+                        ; dy := -1
+                        move.b                  #$ff,GameState_Ball_dy(\1)
+                        move.b                  #$24,GameState_Ball_xNext(\1)
+                        move.b                  #$27,GameState_Ball_yNext(\1)
+                        move.b                  #$01,GameState_Ball_hlfSpd(\1)
+                        move.b                  #$00,GameState_Ball_hlfPhs(\1)
+                        ; wait around 0.6 seconds (at 50 Hz) before starting the ball
+                        move.b                  #30,GameState_Ball_freeze(\1)
+                        endm
+;
+;
+RelaunchPlayer           macro
+                        ; Re-initialize the player position
+                        ; 1 - Ptr to the game state
+                        ; --
+                        move.b                  #32,GameState_Player_x(\1)
+                        move.b                  #5,GameState_Player_y(\1)
+                        move.b                  #8,GameState_Player_w(\1)
+                        move.b                  #2,GameState_Player_h(\1)
+                        move.b                  #0,GameState_Player_dx(\1)
+                        move.b                  #0,GameState_Player_dy(\1)
+                        move.b                  #32,GameState_Player_xNext(\1)
+                        move.b                  #5,GameState_Player_yNext(\1)
+                        endm
 
 ; ----------------------------------------------------------------------------------------------------------------
 ; before all
@@ -473,25 +608,22 @@ PhsGameBeforeEach:      ; ========
 .doFillFreedom          rept                    25
                         move.l                  #0,(a4)+
                         endr
-                        dbf.s                   d7,.doFillFreedom
+                        dbf                     d7,.doFillFreedom
                         ; ========
                         ; -- Init the ball
-                        ; a6 := ptr to the ball
-                        lea                     TheBall,a6
-                        move.l                  #$2427ffff,(a6)+        ; {x,y,dx,dy} := {36,39,-1,-1}
-                        move.l                  #$24270100,(a6)+        ; {next x,next y,enable halfspeed, halfspeed phase} := {36,39,1,0}
-                        move.b                  #30,(a6)+               ; wait around 0.6 seconds (at 50 Hz) before starting the ball
-                        move.b                  #2,(a6)+                ; 2 remaining balls
+                        ; a6 := ptr to the game state
+                        SetupHeapAddress        HposGameStateBase,a6
+                        RelaunchBall            a6
+                        ; 2 remaining balls
+                        move.b                  #2,GameState_Ball_remning(a6)
+                        ; -- Init the player
+                        RelaunchPlayer          a6
+                        ; -- clear the collision list
+                        GameState_clearCldList  a6,a5
                         ; ========
-                        ; -- Game is not over
-                        ; a6 := ptr to the game
-                        lea                     TheGame,a6
-                        move.b                  #1,4(a6)
-                        ; ========
-                        ; -- Level is full
-                        ; a6 := ptr to the level
-                        lea                     TheLevel,a6
-                        move.b                  #200,0(a6)
+                        ; -- Game is not over nor clear
+                        move.b                  #1,GameState_isOver(a6)
+                        move.b                  #1,GameState_isClear(a6)
                         ; ========
                         ; -- Introductory sound
                         ExecSound               #Game_sndGetReady,a5
@@ -502,10 +634,10 @@ PhsGameBeforeEach:      ; ========
 PhsGameUpdate:
                         ; ======== ======== ======== ========
                         ; -- is game not over ?
-                        ; a6 := the game
-                        lea                     TheGame,a6
-                        tst.b                   4(a6)
-                        bne.s                   .startUpdateBall
+                        ; a6 := the game state
+                        SetupHeapAddress        HposGameStateBase,a6
+                        tst.b                   GameState_isOver(a6)
+                        bne                     .startUpdateBall
                         ; -- else end of game, go to the next phase
                         ; a2 := subroutines
                         move.l                  #PhsGameAfterEach,a2
@@ -520,43 +652,41 @@ PhsGameUpdate:
 .startUpdateBall        ; ======== ======== ======== ========
                         ; == Ball update
                         ; ========
-                        ; a5 := the ball
-                        lea                     TheBall,a5
                         ; -- check freezing of the ball
                         ; d7 := freezing counter
                         moveq                   #0,d7
-                        move.b                  8(a5),d7
+                        move.b                  GameState_Ball_freeze(a6),d7
                         tst.b                   d7
                         ; -- if (d7 == 0)
-                        beq.s                   .checkHalfSpeedState
+                        beq                     .checkHalfSpeedState
                         ; -- else update counter and pass
                         subq.b                  #1,d7
-                        move.b                  d7,8(a5)
-                        bra.w                   .startUpdatePlayer
+                        move.b                  d7,GameState_Ball_freeze(a6)
+                        bra                     .startUpdatePlayer
                         ; -- check halfspeed status
                         ; d7 := spare register for the macro
-.checkHalfSpeedState    WhenHalfSpeedSkipOrGo   a5,d7,.startUpdatePlayer
+.checkHalfSpeedState    WhenHalfSpeedSkipOrGo   a6,d7,.startUpdatePlayer
 .doStartUpdateBall      ; ========
                         ; d7 := dy
                         moveq                   #0,d7
-                        move.b                  3(a5),d7
+                        move.b                  GameState_Ball_dy(a6),d7
                         ; d6 := current y
                         moveq                   #0,d6
-                        move.b                  1(a5),d6
+                        move.b                  GameState_Ball_y(a6),d6
                         ; d5 := rebound tracker, bit field : ......yx ; bit set = free to rebound on x or y
                         moveq                   #3,d5
                         ; ========
                         cmp.b                   #50,d6
                         ; -- if d6 < 50
-                        bmi.s                   .startMoveBallAlongY
+                        bmi                     .startMoveBallAlongY
                         ; -- else the ball is lost
                         ; d4 := remaining balls
-                        move.b                  9(a5),d4
+                        move.b                  GameState_Ball_remning(a6),d4
                         tst.b                   d4
                         ; -- if there are remaining balls
-                        bne.s                   .useRemainingBall
+                        bne                     .useRemainingBall
                         ; -- else game over
-                        move.b                  #0,4(a6)
+                        move.b                  #0,GameState_isOver(a6)
                         ; -- play "game over" sound
                         ; a4 := spare register
                         ExecSound               #Game_sndGameOver,a4
@@ -565,34 +695,30 @@ PhsGameUpdate:
                         ; -- decrease remaining ball, init ball position and freeze
 .useRemainingBall       subq.b                  #1,d4
                         ; -- update remaining ball
-                        move.b                  d4,9(a5)
+                        move.b                  d4,GameState_Ball_remning(a6)
                         ; -- play "oh no"
                         ; a4 := spare register
                         ExecSound               #Game_sndOhNo,a4
                         ; -- init ball position and freeze (copy from before each)
-                        ; a4 := ptr to the ball
-                        move.l                  a5,a4
-                        move.l                  #$2427ffff,(a4)+        ; {x,y,dx,dy} := {36,39,-1,-1}
-                        move.l                  #$24270100,(a4)+        ; {next x,next y,enable halfspeed, halfspeed phase} := {36,39,1,0}
-                        move.b                  #30,(a4)                ; wait around 0.6 seconds (at 50 Hz) before starting the ball
+                        RelaunchBall            a6
                         rts
 .startMoveBallAlongY    ; ========
                         tst.b                   d7
                         ; -- if d7 < 0
-                        bmi.s                   .tryMoveBallUp
+                        bmi                     .tryMoveBallUp
                         ; -- else if d7 > 0
-                        bne.s                   .tryMoveBallDown
+                        bne                     .tryMoveBallDown
                         ; -- else d7 = 0, force move up
                         subq.b                  #1,d7
 .tryMoveBallUp          ; ========
                         tst.b                   d6
                         ; -- if d6 > 0
-                        bhi.s                   .doMoveBallAlongY
+                        bhi                     .doMoveBallAlongY
                         ; -- else rebound to go down
                         moveq                   #1,d7
                         bclr.b                  #1,d5                   ; mark rebound on y as done
                         DoSoundBallRebound
-                        bra.s                   .doMoveBallAlongY
+                        bra                     .doMoveBallAlongY
 .tryMoveBallDown        ; ========
                         nop                     ; for now do nothing special
 .doMoveBallAlongY       ; ========
@@ -605,30 +731,30 @@ PhsGameUpdate:
                         move.l                  d6,d3
 .startMoveBallAlongX    ; ========
                         ; d7 := dx
-                        move.b                  2(a5),d7
+                        move.b                  GameState_Ball_dx(a6),d7
                         ; d6 := current x
-                        move.b                  0(a5),d6
+                        move.b                  GameState_Ball_x(a6),d6
                         ; ========
                         tst.b                   d7
                         ; -- if d7 < 0
-                        bmi.s                   .tryMoveBallLeft
+                        bmi                     .tryMoveBallLeft
                         ; -- else if d7 > 0
-                        bne.s                   .tryMoveBallRight
+                        bne                     .tryMoveBallRight
                         ; -- else d = 0, force move left
                         subq.b                  #1,d7
 .tryMoveBallLeft        ; ========
                         tst.b                   d6
                         ; -- if d6 > 0
-                        bhi.w                   .doMoveBallAlongX
+                        bhi                     .doMoveBallAlongX
                         ; -- else rebound to go right
                         moveq                   #1,d7
                         bclr.b                  #0,d5                    ; mark rebound along x as done
                         DoSoundBallRebound
-                        bra.s                   .doMoveBallAlongX
+                        bra                     .doMoveBallAlongX
 .tryMoveBallRight       ; ========
                         cmp.b                   #79,d6
                         ; -- if d6 < 79
-                        bmi.s                   .doMoveBallAlongX
+                        bmi                     .doMoveBallAlongX
                         ; -- else rebound to go left
                         moveq                   #-1,d7
                         bclr.b                  #0,d5                    ; mark rebound along x as done
@@ -646,49 +772,49 @@ PhsGameUpdate:
                         ; ========
                         tst.b                   d5
                         ; if d5 == 0 <=> rebound done on both axis
-                        beq.w                   .commitBall
+                        beq                     .commitBall
                         ; -- else there are rebounds to consider
                         ; a4 := Freedom matrix
                         DerefPtrToPtr           PtrBallFreedomMatrix,a4
+                        ; a3 := Ptr to ball collision list
+                        GameState_clearCldList  a6,a3
                         ; -- Testing 3 positions in the matrix
                         ; -- 1. (next x, next y)
                         ; -- 2. (x, next y)
                         ; -- 3. (next x, y)
                         ; -- Then store each test in d5 : ...312yx
                         ; -- test 1
-                        ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
-                        TstPosToFreedomMatrix   d6,d3,a4,a3,d2,d1
+                        ; a2,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
+                        TstPosToFreedomMatrix   d6,d3,a4,a2,d2,d1
                         ; if position is free
-                        beq.s                   .tstFreedom2
+                        beq                     .tstFreedom2
                         ; -- else mark bit 3 of d5
                         bset.l                  #3,d5
+                        GameState_setCldPoint   a3,d6,d3
 .tstFreedom2            ; ========
                         ; -- test 2
                         ; d0 := x
-                        move.b                  0(a5),d0
-                        ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
-                        TstPosToFreedomMatrix   d0,d3,a4,a3,d2,d1
+                        move.b                  GameState_Ball_x(a6),d0
+                        ; a2,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
+                        TstPosToFreedomMatrix   d0,d3,a4,a2,d2,d1
                         ; -- if position is free
-                        beq.s                   .tstFreedom3
+                        beq                     .tstFreedom3
                         ; -- else mark bit 2 of d5
                         bset.l                  #2,d5
+                        GameState_pushCldPoint  a3,d0,d3
 .tstFreedom3            ; ========
                         ; -- test 3
                         ; d0 := y
-                        move.b                  1(a5),d0
-                        ; a3,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
-                        TstPosToFreedomMatrix   d6,d0,a4,a3,d2,d1
+                        move.b                  GameState_Ball_y(a6),d0
+                        ; a2,d2,d1 := spare registers for the macro TstPosToFreedomMatrix
+                        TstPosToFreedomMatrix   d6,d0,a4,a2,d2,d1
                         ; -- if position is free
-                        beq.s                   .processBallRebounds
+                        beq                     .processBallRebounds
                         ; -- else mark bit 4 of d5
                         bset.l                  #4,d5
+                        GameState_pushCldPoint  a3,d6,d0
 .processBallRebounds    ; ========
-                        ; -- save next x, next y and d5 value for the bricks management
-                        ; a3 := level management structure
-                        lea                     TheLevel,a3
-                        move.b                  d6,2(a3)
-                        move.b                  d3,3(a3)
-                        move.b                  d5,4(a3)
+                        ; REORDERING : a3 free
                         ; -- extract values for switch/case logic
                         ; d2 := (d5 >> 2) & 7 = extract the 3 bits value stored from d5, as switch-case
                         moveq                   #0,d2
@@ -704,14 +830,14 @@ PhsGameUpdate:
                         and.b                   #3,d1
                         subq.b                  #1,d1
                         ; -- switch (d1)
-                        dbf.s                   d1,.processBallReboundY
+                        dbf                     d1,.processBallReboundY
                         ; -- d1 : case 0
                         ; -- do rebound x if bit 2 of d2 set or d2 == 2
                         ; d0 := d2 & %110 (6), nothing to do if 0
                         moveq                   #0,d0
                         move.b                  d2,d0
                         and.b                   #6,d0
-                        beq.w                   .commitBall
+                        beq                     .commitBall
 .doBallReboundX         ; ========
                         ; d7 := -d7
                         neg.b                   d7
@@ -719,47 +845,46 @@ PhsGameUpdate:
                         add.b                   d7,d6
                         add.b                   d7,d6
                         DoSoundBallRebound
-                        bra.w                   .commitBall
+                        bra                     .commitBall
                         ; ========
 .processBallReboundY    ; -- switch (d1)
-                        dbf.s                   d1,.processBallReboundXY
+                        dbf                     d1,.processBallReboundXY
                         ; -- d1 : case 1
                         ; d0 := d2 & %11 (3), nothing to do if 0
                         moveq                   #0,d0
                         move.b                  d2,d0
                         and.b                   #3,d0
-                        beq.w                   .commitBall
+                        beq                     .commitBall
 .doBallReboundY         ; ========
                         ; -- special behaviour if collision against the paddle
                         tst.b                   d4
                         ; -- if ball going up
-                        bmi.s                   .doBallReboundYReally
+                        bmi                     .doBallReboundYReally
                         ; -- else
                         cmp.b                   #40,d3
                         ; -- if next y out of the paddle area
-                        bmi.s                   .doBallReboundYReally
+                        bmi                     .doBallReboundYReally
                         ; -- else collision against the player bumper, need x
+                        ; FIXME : if sticky, implement another logic
                         ; FIXME : when it happens on the border of the screen (left or right), cannot force dx !!
-                        ; a3 := PlayerBumper
-                        lea                     PlayerBumper,a3
                         ; d0 := -(bumper.x - (next x - dx)) = -bumper.x + next x - dx
-                        move.b                  0(a3),d0
+                        move.b                  GameState_Player_x(a6),d0
                         add.b                   d7,d0
                         neg.b                   d0
                         add.b                   d6,d0
                         ; -- test the side of rebound or in the middle, force direction on the side, leave in the middle
                         cmp.b                   #12,d0
-                        bmi.s                   .isBumpOnLeft
+                        bmi                     .isBumpOnLeft
                         ; -- else force dx to the right
                         tst.b                   d7
                         ; -- if needed to force
-                        bmi.s                   .forceXMove
-                        bra.s                   .doBallReboundYReally
+                        bmi                     .forceXMove
+                        bra                     .doBallReboundYReally
 .isBumpOnLeft           cmp.b                   #3,d0
-                        bpl.s                   .doBallReboundYReally
+                        bpl                     .doBallReboundYReally
                         ; -- force dx to the left
                         tst.b                   d7
-                        bmi.s                   .doBallReboundYReally
+                        bmi                     .doBallReboundYReally
                         ; -- ... only if need to force
 .forceXMove             ; d7 := -d7
                         neg.b                   d7
@@ -774,7 +899,7 @@ PhsGameUpdate:
                         add.b                   d4,d3
                         add.b                   d4,d3
                         DoSoundBallRebound
-                        bra.s                   .commitBall
+                        bra                     .commitBall
                         ; ========
 .processBallReboundXY   ; -- d1 : case 2
                         ; -- do rebound according to the value of d2
@@ -785,25 +910,25 @@ PhsGameUpdate:
                         ; // TODO : use a vectors of jumps, should be better for highest values of d2 (do the math before)
                         ; switch d2 : case 0
                         tst.b                   d2
-                        beq.s                   .commitBall
+                        beq                     .commitBall
                         ; switch d2 : case 1
-                        cmp.b                  #1,d2
-                        beq.s                   .doBallReboundY
+                        cmp.b                   #1,d2
+                        beq                     .doBallReboundY
                         ; switch d2 : case 2
-                        cmp.b                  #2,d2
-                        beq.s                   .doBallReboundXY
+                        cmp.b                   #2,d2
+                        beq                     .doBallReboundXY
                         ; switch d2 : case 3
-                        cmp.b                  #3,d2
-                        beq.s                   .doBallReboundY
+                        cmp.b                   #3,d2
+                        beq                     .doBallReboundY
                         ; switch d2 : case 4
-                        cmp.b                  #4,d2
-                        beq.w                   .doBallReboundX
+                        cmp.b                   #4,d2
+                        beq                     .doBallReboundX
                         ; switch d2 : case 5
-                        cmp.b                  #5,d2
-                        beq.s                   .doBallReboundXY
+                        cmp.b                   #5,d2
+                        beq                     .doBallReboundXY
                         ; switch d2 : case 6
-                        cmp.b                  #6,d2
-                        beq.w                   .doBallReboundX
+                        cmp.b                   #6,d2
+                        beq                     .doBallReboundX
                         ; switch d2 : case 7
                         ; -> .doBallReboundXY
 .doBallReboundXY        ; --
@@ -813,30 +938,28 @@ PhsGameUpdate:
                         add.b                   d7,d6
                         add.b                   d7,d6
                         ; --
-                        bra.w                   .doBallReboundY
+                        bra                     .doBallReboundY
                         ; ========
-.commitBall             ; a4 := start of the memory structur to update = TheBall + 2
-                        lea                     2(a5),a4
+.commitBall
                         ; -- save new dx
-                        move.b                  d7,(a4)+
+                        move.b                  d7,GameState_Ball_dx(a6)
                         ; -- save new dy
-                        move.b                  d4,(a4)+
+                        move.b                  d4,GameState_Ball_dy(a6)
                         ; -- save next x
-                        move.b                  d6,(a4)+
+                        move.b                  d6,GameState_Ball_xNext(a6)
                         ; -- save next y
-                        move.b                  d3,(a4)+
+                        move.b                  d3,GameState_Ball_yNext(a6)
                         ; ======== ======== ======== ========
                         ; == Player update
                         ; ========
+.startUpdatePlayer
                         ; -- load player status
-                        ; a6 := PlayerBumper
-.startUpdatePlayer      lea                     PlayerBumper,a6
-                        ; d7 := PlayerBumper.x
-                        move.b                  0(a6),d7
+                        ; d7 := GameState_Player.x
+                        move.b                  GameState_Player_x(a6),d7
                         ; d6 := dx
                         moveq                   #0,d6
-                        ; d5 := PlayerBumper.y
-                        move.b                  1(a6),d5
+                        ; d5 := GameState_Player.y
+                        move.b                  GameState_Player_y(a6),d5
                         ; d4 := dy
                         moveq                   #0,d4
                         ; ========
@@ -850,26 +973,26 @@ PhsGameUpdate:
                         ; ========
                         ; -- j1.up == 0 ?
                         btst.b                  #0,d3
-                        beq.s                   .tstMoveDown
+                        beq                     .tstMoveDown
                         ; -- else moving up
                         subq.b                  #1,d4
                         ; ========
                         ; -- j1.down == 0 ?
 .tstMoveDown            btst.b                  #1,d3
-                        beq.s                   .applyMoveY
+                        beq                     .applyMoveY
                         ; -- else moving down
                         addq.b                  #1,d4
                         ; ========
                         ; -- Apply dy to y, must stay inside [0...]10
 .applyMoveY             add.b                   d4,d5
                         ; -- y >= 0 ?
-                        bpl.s                   .capY
+                        bpl                     .capY
                         ; -- else force y to 0
                         moveq                   #0,d5
-                        bra.s                   .moveX
+                        bra                     .moveX
                         ; -- y < 9 ?
 .capY                   cmp.b                   #9,d5
-                        bmi.s                   .moveX
+                        bmi                     .moveX
                         ; -- else force y to 8
                         move.b                  #8,d5
                         ; ========
@@ -877,191 +1000,124 @@ PhsGameUpdate:
                         ; ========
                         ; -- j1.left == 0 ?
 .moveX                  btst.b                  #2,d3
-                        beq.s                   .moveRight
+                        beq                     .moveRight
                         ; -- else moving left
                         subq.b                  #2,d6
                         ; ========
 .moveRight              ; -- j1.right == 0 ?
                         btst.b                  #3,d3
-                        beq.s                   .applyMoveX
+                        beq                     .applyMoveX
                         ; -- else moving right
                         addq.b                  #2,d6
                         ; ========
                         ; -- Apply dx to x, must stay inside [0...64]
 .applyMoveX             add.b                   d6,d7
                         ; -- x >= 0 ?
-                        bpl.s                   .capX
+                        bpl                     .capX
                         ; -- else force x to 0
                         moveq                   #0,d7
-                        bra.s                   .doUpdatePlayer
+                        bra                     .doUpdatePlayer
                         ; -- x <= 64 ?
 .capX                   cmp.b                   #64,d7
-                        bmi.s                   .doUpdatePlayer
+                        bmi                     .doUpdatePlayer
                         ; -- else force x to 64
                         move.b                  #64,d7
                         ; ========
                         ; -- Save updated model
-                        ; -- PlayerBumper.nextX
-.doUpdatePlayer         move.b                  d7,4(a6)
-                        ; -- PlayerBumper.nextY
-                        move.b                  d5,5(a6)
-                        ; -- PlayerBumper.dx
-                        move.b                  d6,6(a6)
-                        ; -- PlayerBumper.dy
-                        move.b                  d4,7(a6)
+                        ; -- GameState_Player.nextX
+.doUpdatePlayer         move.b                  d7,GameState_Player_xNext(a6)
+                        ; -- GameState_Player.nextY
+                        move.b                  d5,GameState_Player_yNext(a6)
+                        ; -- GameState_Player.dx
+                        move.b                  d6,GameState_Player_dx(a6)
+                        ; -- GameState_Player.dy
+                        move.b                  d4,GameState_Player_dy(a6)
 
                         ; ======== ======== ======== ========
                         ; == update level
                         ; ========
-                        ; a6 := the level
-                        lea                     TheLevel,a6
-                        ; a5 := the ball
-                        lea                     TheBall,a5
-                        ; -- reset the brick counter
-                        move.b                  #0,5(a6)
-                        ; -- load data
-                        ; -- to save space, and because the testing macro only need one value at a time,
-                        ; -- we will use the same register for :
-                        ; -- * the ball x position and saved next x (reminder : before rebounds on something)
-                        ; -- * the ball y position and saved next y (idem)
-                        ; d7 := [ [ball.x >> 1].w | [level.originalnextx >> 1].w ]
-                        moveq                   #0,d7
-                        move.b                  0(a5),d7
-                        lsr.b                   #1,d7
-                        swap                    d7
-                        move.b                  2(a6),d7
-                        lsr.b                   #1,d7
-                        ; d6 := [ [ball.y >> 1].w | [level.originalnexty >> 1].w ]
-                        moveq                   #0,d6
-                        move.b                  1(a5),d6
-                        lsr.b                   #1,d6
-                        swap                    d6
-                        move.b                  3(a6),d6
-                        lsr.b                   #1,d6
-                        ; d5 := saved rebound context (reminder : ...312yx)
-                        moveq                   #0,d5
-                        move.b                  4(a6),d5
-                        tst.b                   d5
-                        ; -- if 0 == d5
-                        beq.w                   .cleanupBrickSavedField
-                        ; -- else there may be someting to do
-                        ; d4 := extract the ...312.. bits of d5
-                        move.l                  d5,d4
-                        and.b                   #$1c,d4
-                        tst.b                   d4
-                        ; -- if 0 == d4
-                        beq.w                   .cleanupBrickSavedField
-                        ; -- else there is something to do
-                        ; -- prepare to save the bricks to erase
-                        ; d3 := count of bricks to erase
-                        moveq                   #0,d3
-                        ; a4 := start of the list of the BrickStatus
-                        lea                     6(a6),a4
+                        ; REORDERING : a5 free
+                        ; a4 := start of the list of the tiles to delete
+                        lea                     GameState_Level_eraseList(a6),a4
                         ; a3 := status matrix
                         DerefPtrToPtr           PtrBrickStatusMatrix,a3
-                        ; ========
-                        cmp.b                   #$08,d4
-                        ; if d4 != ...010..
-                        bne.s                   .tryBrickEraseAlongX
-                        ; -- else the unique brick to erase will be at nextx, nexty
+                        ; d5 := start of the list of collision points (not enough address registers)
+                        move.l                  a6,d5
+                        add.l                   #GameState_Ball_cldList,d5
+                        ; clear d7,d6
+                        moveq                   #0,d7
+                        moveq                   #0,d6
+                        ; -- reset the counter of bricks to erase
+                        ; d3 := actual count of bricks to erase
+                        moveq                   #0,d3
+                        move.b                  d3,GameState_Level_cntToErase(a6)
+.nextCldPoint
+                        ; a2 := Pointer to collision point
+                        move.l                  d5,a2
+                        ; d7 := x of collision point
+                        move.b                  (a2)+,d7
+                        cmp.b                   #$ff,d7
+                        ; -- if (x == $ff) (end of list)
+                        beq                     .doneCldList
+                        ; -- else convert to cell column in status matrix (div by 2)
+                        lsr.b                   #1,d7
+                        ; d6 := y of collision point converted to row in column matrix (div by 2)
+                        move.b                  (a2)+,d6
+                        lsr.b                   #1,d6
+                        ; update d5 for next iteration
+                        move.l                  a2,d5
+                        ; -- Test whether the ball collided a brick
                         ; a2,d2 := spare register for the macro
                         TstModelToStatusMatrix  d7,d6,a3,a2,d2
                         ; -- if no brick
-                        beq.w                   .cleanupBrickSavedField
-                        ; -- else erase brick and store in list
-                        move.w                  #0,(a2)
+                        beq                     .nextCldPoint
+                        ; -- else store in list first tiles to erase, extends of the erasure, and pointers
+                        Game_scanBrkToDelete    a2,d2,d7,a1,d1,d0,a0
                         move.b                  d7,(a4)+
                         move.b                  d6,(a4)+
+                        move.b                  d1,(a4)+
+                        move.b                  #0,(a4)+
+                        move.l                  a0,(a4)+
+                        move.l                  a1,(a4)+
+                        ; -- update counter of bricks to delete
                         addq.b                  #1,d3
-                        move.b                  d3,5(a6)
-                        bra.w                   .cleanupBrickSavedField
-                        ; ========
-.tryBrickEraseAlongX    ; -- process rebound along X (interested in ...31..x of d5)
-                        btst.l                  #0,d5
-                        ; -- if there is no rebound to process
-                        beq.s                   .tryBrickEraseAlongY
-                        ; -- else try erasing along x
-                        btst.l                  #4,d5
-                        ; -- if there was no collision next to the ball
-                        beq.s                   .tryBrickEraseAlongY
-                        ; use y
-                        swap                    d6
-                        ; a2,d2 := spare register for the macro
-                        TstModelToStatusMatrix  d7,d6,a3,a2,d2
-                        ; -- if no brick
-                        beq.s                   .tryBrickEraseAlongY
-                        ; -- else erase brick and store in list
-                        move.w                  #0,(a2)
-                        move.b                  d7,(a4)+
-                        move.b                  d6,(a4)+
-                        ; -- update and save item count
-                        addq.b                  #1,d3
-                        move.b                  d3,5(a6)
-                        ; -- restore d6
-                        swap                    d6
-                        ; ========
-.tryBrickEraseAlongY    ; -- process rebound along Y (interested in ....12y. of d5)
-                        btst.l                  #1,d5
-                        ; -- if there is no rebound to process
-                        beq.s                   .cleanupBrickSavedField
-                        ; -- else try erasing along y
-                        btst.l                  #2,d5
-                        ; -- if there was no collision next to the ball
-                        beq.s                   .cleanupBrickSavedField
-                        ; use x
-                        swap                    d7
-                        ; a2,d2 := spare register for the macro
-                        TstModelToStatusMatrix  d7,d6,a3,a2,d2
-                        ; -- if no brick
-                        beq.s                   .cleanupBrickSavedField
-                        ; -- else erase brick and store in list
-                        move.w                  #0,(a2)
-                        move.b                  d7,(a4)+
-                        move.b                  d6,(a4)+
-                        ; -- update and save item count
-                        addq.b                  #1,d3
-                        move.b                  d3,5(a6)
+                        move.b                  d3,GameState_Level_cntToErase(a6)
+                        ; -- next
+                        bra                     .nextCldPoint
+.doneCldList
                         ; -- Get count of remaining bricks
-                        ; d2 := remaining bricks of the level
+                        ; a4 := Ptr current level
+                        SetupHeapAddress        HposCurrentLvlBase,a4
+                        ; d2 := count broken bricks
                         moveq                   #0,d2
-                        move.b                  0(a6),d2
-                        ; -- update count of remaining bricks
-                        sub.b                   d3,d2
-                        ; -- if there are still some bricks to break
-                        bhi.s                   .commitBrickCount
-                        ; -- else game is cleared
-                        ; a5 := spare register
-                        ExecSound               #Game_sndGameClear,a5
+                        move.w                  Level_CntBroken(a4),d2
+                        add.w                   d3,d2
+                        move.w                  d2,Level_CntBroken(a4)
+                        cmp.w                   Level_CntBrkabl(a4),d2
+                        ; -- skip if not level not clear
+                        blo                     .doUpdateFreedomMatrix
+                        ; -- else level is cleared
+                        ; a4 := spare register
+                        ExecSound               #Game_sndGameClear,a4
                         ; -- the game is over
-                        ; a5 := ptr to the Game
-                        lea                     TheGame,a5
-                        move.b                  #0,4(a5)
-                        ; -- commit the updated remaining bricks count
-.commitBrickCount       move.b                  d2,0(a6)
-                        ; ========
-.cleanupBrickSavedField ; -- reset saved next x, next y, rebound status
-                        move.b                  #0,2(a6)
-                        move.b                  #0,3(a6)
-                        move.b                  #0,4(a6)
+                        move.b                  #0,GameState_isOver(a6)
+                        move.b                  #0,GameState_isClear(a6)
 
 
 
-; -- bombs, TODO
 .doUpdateFreedomMatrix  ; ======== ======== ======== ========
                         ; == update freedom matrix
                         ; ========
-                        ; a6 := player
-                        lea                     PlayerBumper,a6
                         ; a5 := freedom matrix
                         DerefPtrToPtr           PtrBallFreedomMatrix,a5
                         ; ========
                         ; -- erase player occupation
                         ; d7 := player.x,
                         moveq                   #0,d7
-                        move.b                  0(a6),d7
+                        move.b                  GameState_Player_x(a6),d7
                         ; d6 := player.y+40
                         moveq                   #40,d6
-                        add.b                   1(a6),d6
+                        add.b                   GameState_Player_y(a6),d6
                         ; {a4,d5,d4} := {target address, byte value, bit index}
                         PosToFreedomMatrix d7,d6,a5,a4,d5,d4
                         ; d4 := d7 & %111 (keep least significant bits in the "right" order)
@@ -1087,10 +1143,10 @@ PhsGameUpdate:
                         ; ========
                         ; -- draw player occupation
                         ; d7 := player.next x
-                        move.b                  4(a6),d7
+                        move.b                  GameState_Player_xNext(a6),d7
                         ; d6 := player.y+40
                         moveq                   #40,d6
-                        add.b                   5(a6),d6
+                        add.b                   GameState_Player_yNext(a6),d6
                         ; {a4,d5,d4} := {target address, byte value, bit index}
                         PosToFreedomMatrix d7,d6,a5,a4,d5,d4
                         ; d4 := d7 & %111 (keep least significant bits in the "right" order)
@@ -1114,44 +1170,73 @@ PhsGameUpdate:
                         or.b                    d3,(a4)
                         or.b                    d3,(a3)
                         ; ========
-                        ; -- erase bricks if appliable
-                        ; a6 := the level
-                        lea                     TheLevel,a6
+                        ; -- erase bricks in the erasure list
                         ; d7 := the count of bricks to erase
                         moveq                   #0,d7
-                        move.b                  5(a6),d7
+                        move.b                  GameState_Level_cntToErase(a6),d7
                         tst.b                   d7
                         ; -- if count == 0
-                        beq.s                   .thatsAll
-                        ; -- else there are bricks to erase
-                        ; a4 := cursor to the list
-                        lea                     6(a6),a4
+                        beq                     .thatsAll
+                        ; -- else cycle through bricks to erase
+                        lea                     GameState_Level_eraseList(a6),a4
                         ; d7 := loop counter = count - 1
                         subq.b                  #1,d7
-.doEraseNextBrick       ; -- load brick position (must be << 1)
-                        ; d6 := x << 1
+.doEraseNextBrick       ; -- load brick position, converted for PosToFreedomMatrix ( mul by 2)
+                        ; d6 := x * 2
                         moveq                   #0,d6
                         move.b                  (a4)+,d6
-                        add.b                   d6,d6
-                        ; d5 := y << 1
+                        BtMul2                  d6
+                        ; d5 := y * 2
                         moveq                   #0,d5
                         move.b                  (a4)+,d5
-                        add.b                   d5,d5
+                        BtMul2                  d5
                         ; a3,d4,d3 := spare register for the macro
                         PosToFreedomMatrix d6,d5,a5,a3,d4,d3
+                        ; a2 := second line to erase in the matrix = a3 + 10
+                        lea                     10(a3),a2
+                        ; d4 := brick's width - 1 to loop over
+                        moveq                   #0,d4
+                        move.b                  (a4)+,d4
+                        subq                    #1,d4
                         ; d3 := d6 & %111 (keep 3 least significant bits for rotating)
                         move.b                  d6,d3
                         and.b                   #7,d3
                         ; d2 := mask to erase = %00111111 ror d3 = $3f ror d3
                         moveq                   #$3f,d2
                         ror.b                   d3,d2
+.doEraseNextTile
                         ; -- erase the brick
                         and.b                   d2,(a3)
-                        lea                     10(a3),a3
-                        and.b                   d2,(a3)
-                        ; -- next
-                        dbf.s                   d7,.doEraseNextBrick
+                        and.b                   d2,(a2)
+                        ; -- prepare for next tile
+                        ; d2 := rotated by 2 bits to the right
+                        ror.b                   #2,d2
+                        ; d3 := (d3 + 2) & 7 => advance a2/a3 when 0
+                        addq.b                  #2,d3
+                        and.b                   #7,d3
+                        ; -- if (d3 != 0) no need to bump a3/a2
+                        bne                     .noPtrBump
+                        ; -- else bump a3/a2
+                        addq.l                  #1,a3
+                        addq.l                  #1,a2
+.noPtrBump
+                        ; -- next tile
+                        dbf                     d4,.doEraseNextTile
+                        ; -- by the way, erase the bricks in the level
+                        ; a4 : skip unused byte -> ptr to ptr to first cell to clear
+                        addq.l                  #1,a4
+                        ; a1 := ptr to first cell to clear
+                        move.l                  (a4)+,a1
+                        ; a0 := ptr after last cell to clear
+                        move.l                  (a4)+,a0
+.doClearBrickData
+                        move.w                  #0,(a1)+
+                        cmp.l                   a0,a1
+                        bmi                     .doClearBrickData
+                        ; -- next brick
+                        dbf                     d7,.doEraseNextBrick
                         ; ======== ======== ======== ========
+
 .thatsAll               rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; redraw
@@ -1159,9 +1244,9 @@ PhsGameUpdate:
 PhsGameRedraw:          ; ========
                         ; -- is game not over ?
                         ; a6 := the game
-                        lea                     TheGame,a6
-                        tst.b                   4(a6)
-                        bne.s                   .startEraseRemainingBall
+                        SetupHeapAddress        HposGameStateBase,a6
+                        tst.b                   GameState_isOver(a6)
+                        bne                     .startEraseRemainingBall
                         ; -- else do nothing
                         rts
                         ; ======== ======== ======== ========
@@ -1176,98 +1261,142 @@ PhsGameRedraw:          ; ========
                         endr
 .startRedrawBricks      ; ======== ======== ======== ========
                         ; == Redraw (erase only) bricks
-                        ; ========
-                        ; a6 := the level
-                        lea                     TheLevel,a6
-                        ; d7 := brick count
+                        ; d7 := number of bricks to erase
                         moveq                   #0,d7
-                        move.b                  5(a6),d7
+                        move.b                  GameState_Level_cntToErase(a6),d7
                         tst.b                   d7
-                        ; if brick count == 0
-                        beq.w                   .startRedrawPlayer
-                        ; -- else there are bricks to erase
-                        ; a4 := cursor to the list
-                        lea                     6(a6),a4
-                        ; d7 := loop counter = count - 1
+                        ; -- if no brick to erase, skip
+                        beq                     .startRedrawPlayer
+                        ; -- else do the erase
+                        ; a1 := start of blit list
+                        SetupHeapAddress        HposBlitListBase,a1
+                        ; -- setup PtrBlitterList
+                        ; a0 := PtrBlitterList
+                        move.l                  #PtrBlitterList,a0
+                        move.l                  a1,(a0)
+                        ; d7 := d7 - 1 to loop over
                         subq.b                  #1,d7
-.doRedrawNextBrick      ; d6 = offset x screen = x brick * 8 / 2 = x brick * 4
+                        ; a4 := start of bricks erasure list
+                        lea                     GameState_Level_eraseList(a6),a4
+.nextBrickToErase
+                        ; -- compute offset from start of line and skew
+                        ; d6 := column of the first tile
                         moveq                   #0,d6
                         move.b                  (a4)+,d6
-                        WdMul4                  d6
-                        ; d5 := memory screen line offset := y brick * 8 * 160 = y brick * 8 * 16 * 2 * 5
-                        ;    := (y brick << 8)*(4 + 1)
-                        ; compute y brick << 8 first
+                        ; d5 := (bit 0 of d6) << 3 = skew
+                        ; d1 := bit 0 of d6 ; backup to compute xcount
                         moveq                   #0,d5
-                        move.b                  (a4)+,d5
-                        lsl.w                   #8,d5
-                        ; d4 := temp register for storing 4*d5, small enough to use word length
-                        move.l                  d5,d4
-                        WdMul4                  d4
-                        add.w                   d4,d5
-                        ; -- erase an even or odd cell
-                        ; a3 := memory screen + line offset
-                        move.l                  a5,a3
-                        add.l                   d5,a3
-                        btst.w                  #2,d6
-                        ; -- if odd cell
-                        bne.w                   .doEraseOddBrick
-                        ; -- else erase even brick
-                        ; a3 := add offset d6 (16px aligned)
-                        add.l                   d6,a3
-                        rept                    8
-                        and.l                   #$00ff00ff,(a3)
-                        or.l                    #$ff000000,(a3)+
-                        and.l                   #$00ff00ff,(a3)+
-                        lea                     152(a3),a3
+                        move.b                  d6,d5
+                        and.b                   #$1,d5
+                        move.l                  d5,d1
+                        lsl.b                   #3,d5
+                        ; d6 := 2*d6 (column to model x)
+                        WdMul2                  d6
+                        ; d4,d3 : spare data registers, offset in d4
+                        ModelToScreenX          d6,d4,d3
+                        ; d6 := offset to first word in screen line
+                        move.w                  d4,d6
+                        ; -- compute offset from start of screen
+                        ; d4 := row of the first tile * 2 (row to model y)
+                        moveq                   #0,d4
+                        move.b                  (a4)+,d4
+                        WdMul2                  d4
+                        ; d3,d2 : spare registers, offset in d3
+                        ModelToScreenY          d4,d3,d2
+                        ; d6 := offset from start of screen
+                        add.w                   d3,d6
+                        ; a3 := start of screen to update
+                        lea                     (a5,d6),a3
+                        ; a2 := start of source data
+                        lea                     SpritesLinesDat,a2
+                        ; -- compute width and mask of blit
+                        ; d6 := width of the brick
+                        moveq                   #0,d6
+                        move.b                  (a4)+,d6
+                        ; d4 := (1 == d6) ? $ff000000 ; then shift mask
+                        cmp.b                   #1,d6
+                        bne                     .wideBrick
+                        move.l                  #$ff000000,d4
+                        bra                     .shiftMask
+.wideBrick
+                        btst.b                  #0,d6
+                        ; -- skip if d6 even
+                        beq                     .maskForEvenWidth
+                        ; d4 := unskewed mask for odd width
+                        move.l                  #$ffffff00,d4
+                        bra                     .shiftMask
+.maskForEvenWidth
+                        tst.b                   d1
+                        ; d4 := full mask when no skewing
+                        AssignVaElseVbTo        eq,#$ffffffff,#$ffff0000,l,d4
+.shiftMask
+                        lsr.l                   d5,d4
+                        ; d6 := blit xcount = (d6 + d1 + 1) / 2
+                        add.b                   d1,d6
+                        addq.b                  #1,d6
+                        lsr.w                   #1,d6
+                        ; d3 := dest y increment = 160 - 2*xcount = 2* (20 - d6)
+                        moveq                   #0,d3
+                        move.w                  #20,d3
+                        sub.w                   d6,d3
+                        addq.w                  #1,d3
+                        lsl.w                   #3,d3
+                        ; -- prepare blit type #2 (bitplan 1)
+                        DoBlitClrBrickFirst     a2,a3,a1,d4,d3,d6
+                        ; -- prepare blit type #3 (other bit plan and second half)
+                        rept 3
+                        addq.l                  #2,a2
+                        addq.l                  #2,a3
+                        DoBlitClrBrickNext      a2,a3,a1
                         endr
-                        ; -- next
-                        dbf.s                   d7,.doRedrawNextBrick
-                        bra.w                   .startRedrawPlayer
-.doEraseOddBrick        ; ========
-                        ; a3 := add offset d6 & $fff0 (16px aligned)
-                        bclr.l                  #2,d6
-                        add.l                   d6,a3
-                        rept                    8
-                        and.l                   #$ff00ff00,(a3)
-                        or.l                    #$00ff0000,(a3)+
-                        and.l                   #$ff00ff00,(a3)+
-                        lea                     152(a3),a3
+                        subq.l                  #6,a2
+                        lea                     634(a3),a3
+                        DoBlitClrBrickNext      a2,a3,a1
+                        rept 3
+                        addq.l                  #2,a2
+                        addq.l                  #2,a3
+                        DoBlitClrBrickNext      a2,a3,a1
                         endr
-                        ; -- next
-                        dbf.s                   d7,.doRedrawNextBrick
+                        ; -- next item
+                        lea                     9(a4),a4
+                        dbf                     d7,.nextBrickToErase
+                        ; -- terminate and execute blit list
+                        move.w                  #0,(a1)+
+                        _Supexec                #BlitRunList
+                        ; ========
                         ; ======== ======== ======== ========
                         ; -- do nothing if dx, dy are 0 (//NOT YET, what about the first redraw ?)
                         ; -- if dy != 0, erase all player parts at old pos then draw all player parts at new pos
                         ; -- if dx != 0, draw the sequence {erase,1,skip,2,3} (minus) or {1,2,skip,3,erase} (plus) at new pos.
                         ; -- commit new position
                         ; a6 := Player
-.startRedrawPlayer      lea                     PlayerBumper,a6
+.startRedrawPlayer      SetupHeapAddress        HposGameStateBase,a6
                         ; a4 := start of the Player screen area
                         lea                     25600(a5),a4
                         ; a3 := current place to redraw in the screen memory
                         move.l                  a4,a3
                         ; -- erase conditionally
-                        move.b                  6(a6),d7
+                        move.b                  GameState_Player_dx(a6),d7
                         tst.b                   d7
-                        bne.s                   .erasePlayer
-                        move.b                  7(a6),d7
+                        bne                     .erasePlayer
+                        move.b                  GameState_Player_dy(a6),d7
                         beq.w                   .drawPlayer
 .erasePlayer            ; ========
                         ; -- offset to first line
                         ; d5 := offset to the start of the line
                         ; d2 := temp
-                        ModelToScreenY          1(a6),d5,d2
+                        ModelToScreenY          GameState_Player_y(a6),d5,d2
                         ; update offset a3
                         add.l                   d5,a3
                         ; ========
                         ; -- offset and shift to the first column
                         ; d5,d4 := offset and shift value to the screen x (shift value will be 0 or 2)
-                        ModelToScreenX          0(a6),d5,d4
+                        ModelToScreenX          GameState_Player_x(a6),d5,d4
                         ; -- update offset a3
                         add.l                   d5,a3
                         ; ========
                         tst.w                   d4
-                        bne.s                   .eraseOdd
+                        bne                     .eraseOdd
                         ; -- else the player is aligned to 16px positions
                         ; d3 := loop counter
                         moveq                   #7,d3
@@ -1280,8 +1409,8 @@ PhsGameRedraw:          ; ========
                         move.l                  #$ffff0000,(a3)+
                         move.l                  #0,(a3)+
                         lea                     128(a3),a3
-                        dbf.s                   d3,.loopEraseEven
-                        bra.s                   .drawPlayer
+                        dbf                     d3,.loopEraseEven
+                        bra                     .drawPlayer
 .eraseOdd               ; ========
                         ; d3 := loop counter
                         moveq                   #7,d3
@@ -1298,25 +1427,25 @@ PhsGameRedraw:          ; ========
                         or.l                    #$ff000000,(a3)+
                         and.l                   #$00ff00ff,(a3)+
                         lea                     120(a3),a3
-                        dbf.s                   d3,.loopEraseOdd
+                        dbf                     d3,.loopEraseOdd
 .drawPlayer             ; ========
                         ; -- reset a3 := start of the drawable area
                         move.l                  a4,a3
                         ; -- offset to first line
                         ; d5 := offset to the start of the line
                         ; d2 := temp
-                        ModelToScreenY           5(a6),d5,d2
+                        ModelToScreenY           GameState_Player_yNext(a6),d5,d2
                         ; -- update offset a3
                         add.l                   d5,a3
                         ; ========
                         ; -- offset and shift to the first column
                         ; d5,d4 := offset and shift value to the screen x (shift value will be 0 or 2)
-                        ModelToScreenX           4(a6),d5,d4
+                        ModelToScreenX           GameState_Player_xNext(a6),d5,d4
                         ; -- update offset a3
                         add.l                   d5,a3
                         ; ========
                         tst.w                   d4
-                        bne.s                   .drawPlayerOdd
+                        bne                     .drawPlayerOdd
                         ; -- else the player is aligned to 16px positions
                         ; -- setup register for calling the display macro
                         ; a2 := a3 (dest)
@@ -1327,7 +1456,7 @@ PhsGameRedraw:          ; ========
                         ; d1 := 0
                         moveq                   #0,d1
                         bsr.w                   ExecShowPlayer
-                        bra.s                   .doneDrawPlayer
+                        bra                     .doneDrawPlayer
 .drawPlayerOdd          ; ========
                         ; d3 := loop counter
                         ; -- setup register for calling the display macro
@@ -1341,14 +1470,12 @@ PhsGameRedraw:          ; ========
                         bsr.w                   ExecShowPlayer
 .doneDrawPlayer         ; ========
                         ; -- done, commit model update
-                        move.b                  4(a6),0(a6)
-                        move.b                  5(a6),1(a6)
+                        move.b                  GameState_Player_xNext(a6),GameState_Player_x(a6)
+                        move.b                  GameState_Player_yNext(a6),GameState_Player_y(a6)
 
 
                         ; ========
 RedrawBall:
-                        ; a6 := ptr to the ball
-                        lea                     TheBall,a6
                         ; a4 := start address of the redrawing area (the full screen)
                         lea                     0(a5),a4
                         ; a3 := start address of the ball redrawing to compute
@@ -1359,7 +1486,7 @@ RedrawBall:
                         ; -- offset to first line
                         ; d7 := from y to offset
                         ; d2 := temp
-                        ModelToScreenY          1(a6),d7,d2
+                        ModelToScreenY          GameState_Ball_y(a6),d7,d2
                         cmp.l                   #32000,d7
                         ; -- if out of screen
                         bpl.w                   .draw
@@ -1368,13 +1495,13 @@ RedrawBall:
                         ; ======
                         ; -- Offset to actual drawing start address and shifting of the pattern
                         ;
-                        ModelToScreenX          0(a6),d7,d6
+                        ModelToScreenX          GameState_Ball_x(a6),d7,d6
                         ; ========
                         ; -- update offset a3
                         add.w                   d7,a3
                         ; ========
                         ; draw using the right shift
-                        dbf.s                   d6,.caseEraseShift4
+                        dbf                     d6,.caseEraseShift4
                         and.l                   #$0fff0fff,(a3)
                         or.l                    #$f0000000,(a3)+
                         and.l                   #$0fff0fff,(a3)+
@@ -1391,7 +1518,7 @@ RedrawBall:
                         or.l                    #$f0000000,(a3)+
                         and.l                   #$0fff0fff,(a3)+
                         bra.w                   .draw
-.caseEraseShift4        dbf.s                   d6,.caseEraseShift8
+.caseEraseShift4        dbf                     d6,.caseEraseShift8
                         and.l                   #$f0fff0ff,(a3)
                         or.l                    #$0f000000,(a3)+
                         and.l                   #$f0fff0ff,(a3)+
@@ -1408,7 +1535,7 @@ RedrawBall:
                         or.l                    #$0f000000,(a3)+
                         and.l                   #$f0fff0ff,(a3)+
                         bra.w                   .draw
-.caseEraseShift8        dbf.s                   d6,.caseEraseShift12
+.caseEraseShift8        dbf                     d6,.caseEraseShift12
                         and.l                   #$ff0fff0f,(a3)
                         or.l                    #$00f00000,(a3)+
                         and.l                   #$ff0fff0f,(a3)+
@@ -1424,7 +1551,7 @@ RedrawBall:
                         and.l                   #$ff0fff0f,(a3)
                         or.l                    #$00f00000,(a3)+
                         and.l                   #$ff0fff0f,(a3)+
-                        bra.s                   .draw
+                        bra                     .draw
 .caseEraseShift12       and.l                   #$fff0fff0,(a3)
                         or.l                    #$000f0000,(a3)+
                         and.l                   #$fff0fff0,(a3)+
@@ -1446,15 +1573,15 @@ RedrawBall:
                         ; -- offset to first line
                         ; d7 := from newY to offset
                         ; d2 := temp
-                        ModelToScreenY           5(a6),d7,d2
+                        ModelToScreenY           GameState_Ball_yNext(a6),d7,d2
                         cmp.l                   #32000,d7
                         ; -- if out of screen
-                        bpl.s                   .commitBall
+                        bpl                     .commitBall
                         ; -- update offset
                         add.l                   d7,a3
                         ; ======
                         ; d7,d6 := new x -> offset to actual drawing start address and shifting of the pattern, resp.
-                        ModelToScreenX          4(a6),d7,d6
+                        ModelToScreenX          GameState_Ball_xNext(a6),d7,d6
                         ; ========
                         ; -- update offset a3
                         add.w                   d7,a3
@@ -1470,19 +1597,19 @@ RedrawBall:
                         WdMul4                  d1
                         bsr.w                   ExecShowBall
                         ; -- done, commit new coordinates
-.commitBall             move.b                  4(a6),0(a6)
-                        move.b                  5(a6),1(a6)
+.commitBall             move.b                  GameState_Ball_xNext(a6),GameState_Ball_x(a6)
+                        move.b                  GameState_Ball_yNext(a6),GameState_Ball_y(a6)
 
 .DrawRemainingBalls:     ; ========
                         ; -- draw the remainng balls
                         ; d7 := remaining balls
                         moveq                   #0,d7
-                        move.b                  9(a6),d7
+                        move.b                  GameState_Ball_remning(a6),d7
                         tst.b                   d7
                         ; a4 := start of the display = a5 + 196 * 160 = a5 + 31360
                         lea                     31360(a5),a4
                         ; -- if (d7 == 0)
-                        beq.s                   .thatsAll
+                        beq                     .thatsAll
                         ; -- else display some balls (up to 2)
                         ; -- setup register for calling the display macro
                         ; a2 := start of the display = a5 + 196 * 160 = a5 + 31360
@@ -1495,7 +1622,7 @@ RedrawBall:
                         bsr.w                   ExecShowBall
                         cmp.b                   #2,d7
                         ; -- if (d7 < 2)
-                        bmi.s                   .thatsAll
+                        bmi                     .thatsAll
 .drawTwoRemaining       ; ========
                         ; -- else display some balls (up to 2)
                         ; a2 := start of the display = a5 + 196 * 160 = a5 + 31360
@@ -1508,6 +1635,25 @@ RedrawBall:
                         bsr.w                   ExecShowBall
                         ; ========
 .thatsAll
+                        rts                     ; comment this line to debug freedom matrix
+                        ; ========
+                        ; -- debug freedom matrix
+                        ; a4 := freedom matrix
+                        DerefPtrToPtr           PtrBallFreedomMatrix,a4
+                        ; a3 := screen + 16000
+                        lea                     16000(a5),a3
+                        ; -- for 50 lines
+                        rept 50
+                        ; -- for 5 words per line
+                        rept 5
+                        ; -- for 4 bitplans
+                        move.w                  (a4),(a3)+
+                        move.w                  (a4),(a3)+
+                        move.w                  (a4),(a3)+
+                        move.w                  (a4)+,(a3)+
+                        endr
+                        lea                     120(a3),a3
+                        endr
                         rts
 ;
 ; ----------------------------------------------------------------------------------------------------------------
@@ -1534,48 +1680,15 @@ PtrBallFreedomMatrix    dc.l                    0
 ; ================================================================================================================
 ; ================================================================================================================
 ; ================================================================================================================
-TheGame:
-                        dc.l                    0                       ; score
-                        dc.b                    0                       ; is game over ?
-                        even
 ; ================================================================================================================
-TheBall:
-                        dc.b                    36,20                   ; x,y
-                        dc.b                    0,0                     ; dx,dy
-                        dc.b                    37,19                   ; nx 'new x', ny 'new y'
-                        dc.b                    1,0                     ; flag 'half speed' (not 0), half speed phase
-                        dc.b                    0                       ; counter to freeze the ball until 0
-                        dc.b                    0                       ; remaining balls
-                        even
 ; ================================================================================================================
-PlayerBumper:
-                        dc.b                    32,5,8,1                ; x,y,w,h
-                        ; 0 <= x < 72
-                        ; 0 <= y < 10
-                        ; w may change with bonus
-                        ; h stay constant.
-                        dc.b                    32,5,0,0
-                        ; next x, y, dx, dy respectively
-                        dc.b                    0,0
-                        ; next w, dw respectively
-                        even
 ; ================================================================================================================
-TheLevel:
-                        dc.w                    0                       ; Number of remaining bricks to break (0 = win)
-                        ; saved values from the ball update (step 2 of processing rebounds, see .processBallRebounds)
-                        dc.b                    0                       ; initial next x from the ball update
-                        dc.b                    0                       ; initial next y from the ball update
-                        dc.b                    0                       ; rebound status flag (...tttyx)
-                        ; bricks to erase on screen
-                        dc.b                    0                       ; number of bricks (0, 1 or 2)
-                        ds.b                    4                       ; buffer, bricks position in the bricks status model (col, row) , 2 bytes each
-                        even
 ; ================================================================================================================
 ; Sound descriptors
 Game_sndGetReady        ds.b                    SIZEOF_DmaSound
 Game_sndGameOver        ds.b                    SIZEOF_DmaSound
 Game_sndGameClear       ds.b                    SIZEOF_DmaSound
-Game_sndOhNo        ds.b                    SIZEOF_DmaSound
+Game_sndOhNo            ds.b                    SIZEOF_DmaSound
 ; ================================================================================================================
 ; ================================================================================================================
 ; ================================================================================================================

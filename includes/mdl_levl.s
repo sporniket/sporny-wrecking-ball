@@ -28,8 +28,101 @@ Level_Bricks:           rs.w 400                ; 10 lines of 40 bricks ([multic
 SIZEOF_Level:           rs.w 0
 ; ================================================================================================================
 ; ================================================================================================================
+;
+Level_incField          macro ; (field offset, this)
+                        ; increment one of the field (should be counters) ; load/modify/store.
+                        ; 1 - field offset, e.g. Level_CntBrkabl
+                        ; 2 - address register, destination (level structure)
+                        ; 3 - spare data register
+                        ; ---
+                        moveq                   #0,\3
+                        move.w                  \1(\2),\3
+                        addq.w                  #1,\3
+                        move.w                  \3,\1(\2)
+                        endm
+;
+;
+Level_decField          macro ; (field offset, this)
+                        ; decrement one of the field (should be counters) ; load/modify/store.
+                        ; 1 - field offset, e.g. Level_CntBrkabl
+                        ; 2 - address register, destination (level structure)
+                        ; 3 - spare data register
+                        ; ---
+                        moveq                   #0,\3
+                        move.w                  \1(\2),\3
+                        subq.w                  #1,\3
+                        move.w                  \3,\1(\2)
+                        endm
+;
+;
+Level_setField          macro ; (field offset, this, value)
+                        ; increment one of the field (should be counters).
+                        ; 1 - field offset, e.g. Level_CntBrkabl
+                        ; 2 - address register, destination (level structure)
+                        ; 3 - effective value (e.g. #3, #symbol, register)
+                        ; ---
+                        move.w                  \3,\1(\2)
+                        endm
+;
+;
+Level_addToField       macro ; (field offset, this, value)
+                        ; add a value to the field (should be counters).
+                        ; 1 - field offset, e.g. Level_CntBrkabl
+                        ; 2 - address register, destination (level structure)
+                        ; 3 - effective value (e.g. #3, #symbol, register)
+                        ; 4 - spare data register
+                        ; ---
+                        moveq                   #0,\4
+                        move.w                  \1(\2),\4
+                        add.w                   \3,\4
+                        move.w                  \4,\1(\2)
+                        endm
+;
+;
+Level_subToField       macro ; (field offset, this, value)
+                        ; substract a value to the field (should be counters).
+                        ; 1 - field offset, e.g. Level_CntBrkabl
+                        ; 2 - address register, destination (level structure)
+                        ; 3 - effective value (e.g. #3, #symbol, register)
+                        ; 4 - spare data register
+                        ; ---
+                        moveq                   #0,\4
+                        move.w                  \1(\2),\4
+                        sub.w                   \3,\4
+                        move.w                  \4,\1(\2)
+                        endm
+;
+;
+Level_addqToField       macro ; (field offset, this, value)
+                        ; add a small value (addq compatible) to the field (should be counters).
+                        ; 1 - field offset, e.g. Level_CntBrkabl
+                        ; 2 - address register, destination (level structure)
+                        ; 3 - litteral value (e.g. 3)
+                        ; 4 - spare data register
+                        ; ---
+                        moveq                   #0,\4
+                        move.w                  \1(\2),\4
+                        addq.w                  #\3,\4
+                        move.w                  \4,\1(\2)
+                        endm
+;
+;
+Level_subqToField       macro ; (field offset, this, value)
+                        ; substract a small value (subq compatible) to the field (should be counters).
+                        ; 1 - field offset, e.g. Level_CntBrkabl
+                        ; 2 - address register, destination (level structure)
+                        ; 3 - litteral value (e.g. 3)
+                        ; 4 - spare data register
+                        ; ---
+                        moveq                   #0,\4
+                        move.w                  \1(\2),\4
+                        subq.w                  #\3,\4
+                        move.w                  \4,\1(\2)
+                        endm
+;
+
 ; Loading v0 : simple copy and counting
-Level_init_v0:          macro ; (from,this)
+Level_init_v0           macro ; (from,this)
                         ; 1 - address register, source
                         ; 2 - address register, destination (level structure)
                         ; 3 - spare address register
@@ -38,6 +131,7 @@ Level_init_v0:          macro ; (from,this)
                         ; 6 - spare data register
                         ; 7 - spare data register
                         ; 8 - spare data register
+                        ; 9 - spare data register
                         ; --
                         ; -- Reset the level
                         ; \3 := the level
@@ -84,6 +178,12 @@ Level_init_v0:          macro ; (from,this)
                         and.b                   #%11,\8
                         ; \7 := cell type
                         lsr.b                   #2,\7
+                        btst.b                   #1,\8
+                        ; -- skip if not start of brick
+                        beq                     .notStartOfBrick\@
+                        Level_incField          Level_CntBrkabl,\2,\9
+                        ; TODO count other things
+.notStartOfBrick\@
                         cmp.b                   #$10,\7
                         ; -- if basic brick
                         bmi.s                   .basicBrick\@
