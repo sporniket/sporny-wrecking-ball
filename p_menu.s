@@ -110,6 +110,7 @@ PhsMenuBeforeAll:
                         move.l                  a5,Menu_PtrImageBase(a6)
                         lea                     32000(a5),a5
                         move.l                  a5,Menu_PtrImageTop(a6)
+                        ; ===========
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; before each
@@ -141,6 +142,17 @@ PhsMenuBeforeEach:
                         move.l                  Menu_PtrImageBase(a6),a5
                         lea                     -160(a5),a5
                         move.l                  a5,Menu_PtrImageCurrent(a6)
+                        ; ========
+                        ; -- Reset level source to builtin list
+                        ; a6 := game state
+                        SetupHeapAddress        HposGameStateBase,a6
+                        ; a5 := list of builtin levels
+                        lea                     DatLevelList,a5
+                        ; copy size, start of list
+                        move.w                  (a5)+,GameState_Level_srcSize(a6)
+                        move.l                  a5,GameState_Level_srcPtr(a6)
+                        ; start at first element
+                        move.w                  #0,GameState_Level_srcCur(a6)
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; update

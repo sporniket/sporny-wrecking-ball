@@ -17,7 +17,7 @@ BtMul4                  macro
                         BtMul2                  \1
                         BtMul2                  \1
                         endm
-
+;
 ; ================================================================================================================
 ; Multiply by a power of 2 -- word -- BEWARE OF OVERFLOWS
 ;
@@ -31,7 +31,7 @@ WdMul4                  macro
                         WdMul2                  \1
                         WdMul2                  \1
                         endm
-
+;
 ; ================================================================================================================
 ; Multiply by a power of 2 -- long -- BEWARE OF OVERFLOWS
 ;
@@ -44,4 +44,13 @@ LgMul4                  macro
                         ; 1 - register to double
                         LgMul2                  \1
                         LgMul2                  \1
+                        endm
+;
+; ================================================================================================================
+; Quick clear address registers
+;
+ClearAddress            macro
+                        ; 1 - address register to double
+                        ; --
+                        sub.l                   \1,\1
                         endm

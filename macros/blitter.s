@@ -7,7 +7,7 @@
 ; ================================================================================================================
 ; Blitter macros
 ;
-BlitterBase             = $ffff8a00
+BlitterBase             = $8a00
 BlitterMiscReg1         = $ffff8a3c
 
                         rsreset

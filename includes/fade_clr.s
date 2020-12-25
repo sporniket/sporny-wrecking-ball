@@ -30,12 +30,6 @@ FadeClr_PtrSrcNext      rs.l 1                  ; next value of the pointer
 FadeClr_PtrDest         rs.l 1                  ; Pointer to the start of the destination
 FadeClr_PtrDestNext     rs.l 1                  ; next value of the pointer
 FadeClr_CountY          rs.w 1                  ; Number of lines to display at this step
-; -- workaround for blitter glitch
-FadeClr_PtrSrc2          rs.l 1                  ; Pointer to the start of the source to copy
-FadeClr_PtrSrc2Next      rs.l 1                  ; next value of the pointer
-FadeClr_PtrDest2         rs.l 1                  ; Pointer to the start of the destination
-FadeClr_PtrDest2Next     rs.l 1                  ; next value of the pointer
-FadeClr_CountY2          rs.w 1                  ; Number of lines to display at this step
 SIZEOF_FadeClr          rs.b 0
 
 ; -- constants
@@ -57,9 +51,6 @@ FadeClr_init            macro
                         ; 9 - litteral, destination increment y
                         ; a - litteral, destination increment after each step
                         ; b - litteral, destination increment for the final phase
-                        ; c - litteral, half source increment (workaround blitter glitch)
-                        ; d - litteral, half dest increment (workaround blitter glitch)
-                        ; e - spare data register
                         ; --
                         move.l                  #\2,FadeClr_Src(\1)
                         move.w                  #\3,FadeClr_SrcIncX(\1)
@@ -79,16 +70,6 @@ FadeClr_init            macro
                         move.l                  #\7,FadeClr_PtrDest(\1)
                         move.l                  #0,FadeClr_PtrDestNext(\1)
                         move.w                  #0,FadeClr_CountY(\1)
-                        ; -- workaround blitter glitch
-                        move.l                  #\2,\e
-                        add.l                   #\c,\e
-                        move.l                  \e,FadeClr_PtrSrc2(\1)
-                        move.l                  #0,FadeClr_PtrSrc2Next(\1)
-                        move.l                  #\7,\e
-                        add.l                   #\d,\e
-                        move.l                  \e,FadeClr_PtrDest2(\1)
-                        move.l                  #0,FadeClr_PtrDest2Next(\1)
-                        move.w                  #0,FadeClr_CountY2(\1)
                         endm
 ; ================================================================================================================
 ; ================================================================================================================
@@ -115,14 +96,6 @@ FadeClr_runStep         macro
                         move.l                  FadeClr_PtrDest(\1),\3
                         add.l                   FadeClr_DestNextFinal(\1),\3
                         move.l                  \3,FadeClr_PtrDestNext(\1)
-                        ; \3 := next source to compute (workaround blitter glitch)
-                        move.l                  FadeClr_PtrSrc2(\1),\3
-                        add.l                   FadeClr_SrcNextFinal(\1),\3
-                        move.l                  \3,FadeClr_PtrSrc2Next(\1)
-                        ; \3 := next destination to compute (workaround blitter glitch)
-                        move.l                  FadeClr_PtrDest2(\1),\3
-                        add.l                   FadeClr_DestNextFinal(\1),\3
-                        move.l                  \3,FadeClr_PtrDest2Next(\1)
                         ; \3 := next y count to compute
                         move.l                  #FadeClr_STEP_END,\3
                         sub.w                   \2,\3
@@ -136,14 +109,6 @@ FadeClr_runStep         macro
                         move.l                  FadeClr_PtrDest(\1),\3
                         add.l                   FadeClr_DestNext(\1),\3
                         move.l                  \3,FadeClr_PtrDestNext(\1)
-                        ; \3 := next source to compute (workaround blitter glitch)
-                        move.l                  FadeClr_PtrSrc2(\1),\3
-                        add.l                   FadeClr_SrcNext(\1),\3
-                        move.l                  \3,FadeClr_PtrSrc2Next(\1)
-                        ; \3 := next destination to compute (workaround blitter glitch)
-                        move.l                  FadeClr_PtrDest2(\1),\3
-                        add.l                   FadeClr_DestNext(\1),\3
-                        move.l                  \3,FadeClr_PtrDest2Next(\1)
                         ; -- y count = step < FadeClr_STEP_PHASE_MIDDLE ? step + 1 : 8
                         cmp.w                   #FadeClr_STEP_PHASE_MIDDLE,\2
                         bpl.s                   .useFixedCountY\@
@@ -158,16 +123,7 @@ FadeClr_runStep         macro
                         ; \2 := step count to update
                         addq.w                  #1,\2
                         move.w                  \2,FadeClr_Step(\1)
-                        ; -- split count y if necessary (workaround blitter glitch)
-                        cmp.w                   #5,\3
-                        bmi.s                   .noSplit\@
-                        move.w                  #4,FadeClr_CountY(\1)
-                        sub.w                   #4,\3
-                        move.w                  \3,FadeClr_CountY2(\1)
-                        bra.s                   .thatsAll\@
-.noSplit\@
                         move.w                  \3,FadeClr_CountY(\1)
-                        move.w                  #0,FadeClr_CountY2(\1)
 .thatsAll\@
                         endm
 ; ================================================================================================================
@@ -177,9 +133,6 @@ FadeClr_commit          macro
                         ; 1 - address register, pointer to the running model
                         move.l                  FadeClr_PtrSrcNext(\1),FadeClr_PtrSrc(\1)
                         move.l                  FadeClr_PtrDestNext(\1),FadeClr_PtrDest(\1)
-                        ; -- workaround blitter glitch
-                        move.l                  FadeClr_PtrSrc2Next(\1),FadeClr_PtrSrc2(\1)
-                        move.l                  FadeClr_PtrDest2Next(\1),FadeClr_PtrDest2(\1)
                         endm
 ; ================================================================================================================
 ; ================================================================================================================

@@ -22,7 +22,7 @@ HposGridTop             rs.w                    0
 HposFreedomBase         rs.b                    500
 HposFreedomTop          rs.b                    0
 ; Blitter list : 2*(70 bytes (= 1 blit item 2 + 3 blit items 3) + 912 bytes (= 19 x 4 blit item 3)) + 2 bytes (terminator)
-HposBlitListBase        rs.b                    1966
+HposBlitListBase        rs.b                    4000;1966
 HposBlitListTop         rs.b                    0
 ; Game state
 HposGameStateBase       rs.b                    SIZEOF_GameState
@@ -163,7 +163,7 @@ ModelToScreenY          macro
 ; ================================================================================================================
                         ;
                         include                 'p_menu.s'              ; Menu phase
-                        include                 'p_inlvl.s'              ; Fade to Game phase
+                        include                 'p_inlvl.s'             ; Fade to Game phase
                         include                 'p_gm.s'                ; Game phase
                         include                 'p_fend.s'              ; Fade to end (then cycle)
 

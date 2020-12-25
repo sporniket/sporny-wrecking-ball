@@ -5,6 +5,7 @@
 ; ================================================================================================================
 ; REQUIRES systraps.s,
 ; ================================================================================================================
+; See Atari compendium, DMA Sound registers (pdf page 312)
 ; Dma Sound setup structure
                         rsreset
 DmaSound_base           rs.l 1                  ; pointer to start of the sound (included)
@@ -23,45 +24,29 @@ DmaSound_CTL_STOP       = 0
 DmaSound_CTL_ONCE       = 1
 DmaSound_CTL_REPEAT     = 3
 ; ================================================================================================================
-; Dma sound macros, MUST be run in supervisor mode
-
-DmaSound_setupFrame     macro
-                        ; split the 3 bytes of the sound addresse (beginning or end) into one of the frames registers
-                        ; 1 - address register, contains the start of the frame to set
-                        ; 2 - data register, contains the value to put in frame
-                        ; 3 - spare data register
-                        ; -- high byte first
-                        swap                    \2
-                        move.w                  \2,(\1)+
-                        ; -- middle high byte then
-                        swap                    \2
-                        moveq                   #0,\3
-                        ; \3 := low byte backup before shifting
-                        move.b                  \2,\3
-                        lsr.w                   #8,\2
-                        move.w                  \2,(\1)+
-                        ; -- low byte, finally
-                        move.w                  \3,(\1)+
-                        endm
 ;
 DmaSound_doPlayOnce     macro
+                        ; Play a dma sound sample, MUST be run in supervisor mode
                         ; 1 - Label to the base addrress to setup
                         ; 2 - Label to the top address to setup
                         ; 3 - spare adresse register for use
                         ; 4 - spare data register for use
                         ; 5 - spare data register for use
-                        ; -- setup frame base
-                        move.l                  #$ffff8902,\3
+                        ; --
+                        ; -- we use movep to fill the low bytes of 4 dma sound registries at a time
+                        ; -- setup playback control + frame base
+                        move.w                  #$8901,\3
                         move.l                  \1,\4
-                        DmaSound_setupFrame     \3,\4,\5
-                        ; -- setup frame end
-                        move.l                  #$ffff890e,\3
+                        and.l                   #$ffffff,\4 ; highest byte at 0 = stop playback
+                        movep.l                 \4,0(\3)
+                        ; -- setup frame top + playback mode
+                        move.w                  #$890f,\3
                         move.l                  \2,\4
-                        DmaSound_setupFrame     \3,\4,\5
-                        ; -- setup mono 12xxx Hz
-                        move.b                  #$81,$ffff8921
+                        lsl.l                   #8,\4
+                        move.b                  #DmaSound_MONO_12,\4
+                        movep.l                 \4,0(\3)
                         ; -- play once
-                        move.w                  #$0001,$ffff8900
+                        move.w                  #DmaSound_CTL_ONCE,$ffff8900.w
                         endm
 ;
 ;

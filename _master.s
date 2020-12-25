@@ -122,6 +122,11 @@ CanStart:               ; --------
                         _Setpalette             appPalette
                         ; -- prepare to quit abruptly
                         SetupAbnormalTerm
+                        ; -- Display greeting message
+                        FlushInp
+                        Print                   messGreetings
+                        WaitInp
+                        FlushInp
                         ; proceed to the app
                         bsr.w                   BodyOfApp
 
@@ -316,7 +321,7 @@ CheckDmaSound:
 FnIsReadableAddress:    ; excerpt from https://github.com/emutos/emutos/blob/master/bios/vectors.S
                         ; _check_read_byte
                         ; to test hardware register.
-                        ; 8(sp) : address to test. (It's a trap : called through supexec, pushed supexec params before)
+                        ; 8(sp) : address to test. (It's a trap : called through supexec, pushed supexec params before)
                         ; @return d0 != 0 if ok
                         ;
                         ; d1 := backup stack
@@ -389,7 +394,7 @@ BufferJoystate          dc.w                    0
 ; ================================================================================================================
 ; Memory management data
 ;
-; Program memory map : [MmBasepage...[MmStackBase...]MmHeapBase...]MmHeapTop
+; Program memory map : [MmBasepage...[MmStackBase...]MmHeapBase...]MmHeapTop
 ;
 ; --- Notation convention ---
 ; Given :
@@ -446,5 +451,30 @@ messTosVersion          dc.b                    "TOS version > 1.00 ? ",0
 messBlitter             dc.b                    "Has blitter ? ",0
 messBlitterActivated    dc.b                    "was off -> switch on",0
 messDmaSound            dc.b                    "Can access DMA sound register ? ",0
-
+; ================================================================================================================
+; Greeting message
+messGreetings           dc.b 10,13,"SPORNY'S WRECKING BALL 'PRELUDE'"
+                        dc.b 10,13,"Alpha 'Merry End of the Year !' version"
+                        dc.b 10,13
+                        dc.b 10,13,"# Some tips to play..."
+                        dc.b 10,13
+                        dc.b 10,13,"When the ball is captive, HOLD FIRE to"
+                        dc.b 10,13,"steer the ball left or right THEN"
+                        dc.b 10,13,"RELEASE FIRE"
+                        dc.b 10,13
+                        dc.b 10,13,"* Orange-ish gem : 'Juggernaut' mode"
+                        dc.b 10,13,"* Blue-ish gem : 'Shallow' mode"
+                        dc.b 10,13,"* Green-ish blob : 'Sluggish' mode"
+                        dc.b 10,13
+                        dc.b 10,13,"* WIN LEVEL CONDITIONS : "
+                        dc.b 10,13
+                        dc.b 10,13,"  * Reach an unlocked 'Exit'"
+                        dc.b 10,13,"    Unlock 'Exit' by collecting all keys"
+                        dc.b 10,13
+                        dc.b 10,13,"  * Collect all the stars"
+                        dc.b 10,13
+                        dc.b 10,13,"  * Break all the bricks"
+                        dc.b 10,13
+                        dc.b 10,13,"Press any key and have fun !"
+                        dc.b 0
                         even

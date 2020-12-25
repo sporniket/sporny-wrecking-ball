@@ -121,8 +121,6 @@ TstPosToFreedomMatrix   macro
                         endm
 ;
 ;
-Game_eraseTiles
-;
 ;
 
 WhenHalfSpeedSkipOrGo   macro
@@ -132,17 +130,34 @@ WhenHalfSpeedSkipOrGo   macro
                         ; 3 - branch destination when the update should be disabled
                         ; -- check halfspeed status
                         ; \2 := halfspeed phase
-                        move.b                  GameState_Ball_hlfPhs(\1),\2
+                        move.b                  GameState_Ball_phase(\1),\2
                         tst.b                   \2
-                        ; -- if \2 == 0
+                        ; -- reset phase if \2 == 0
+                        beq                     .resetPhase\@
+                        ; -- else test bit #0 of phase
+                        btst.l                  #0,\2
+                        ; -- refresh normally if not set
                         beq                     .continue\@
-                        ; -- else check whether halfspeed is enabled
-                        ; \2 := halfspeed enable
-                        move.b                  GameState_Ball_hlfSpd(\1),\2
-                        tst.b                   \2
+                        ; -- else ...
+                        ; -- ...update phase
+                        subq.b                  #1,\2
+                        move.b                  \2,GameState_Ball_phase(\1)
+                        ; -- ... and check whether halfspeed is enabled
+                        ; \2 := Ball behavior
+                        move.w                  GameState_Ball_behavior(\1),\2
+                        cmp.w                   #BALL_BEHAVIOR_GLUE,\2
                         ; -- if halfspeed is disabled
                         beq                     \3
+                        bra                     .thatsAll\@
+.resetPhase\@           ; ========
+                        add.b                   #15,\2
+                        move.b                  \2,GameState_Ball_phase(\1)
+                        bra                     .thatsAll\@
 .continue\@             ; ========
+                        ; -- else update phase...
+                        subq.b                  #1,\2
+                        move.b                  \2,GameState_Ball_phase(\1)
+.thatsAll\@
                         endm
 
 ;
@@ -464,7 +479,15 @@ Game_scanBrkToDelete  macro
 RelaunchBall            macro
                         ; Re-initialize the ball (new ball).
                         ; 1 - Ptr to game state
+                        ; 2 - spare data register
                         ; --
+                        ; -- Ball is captive
+                        move.b                  #BALL_CAPTV_WAIT_FIRE,GameState_Ball_cptvState(\1)
+                        ; to the left (-1)
+                        move.b                  #$ff,GameState_Ball_cptvSteer(\1)
+                        move.b                  #1,GameState_Ball_cptvPos(\1)
+                        move.b                  #BALL_POSCAPTV_LEFT,GameState_Ball_cptvPosT(\1)
+
                         move.b                  #$24,GameState_Ball_x(\1)
                         move.b                  #$27,GameState_Ball_y(\1)
                         ; dx := -1
@@ -474,9 +497,12 @@ RelaunchBall            macro
                         move.b                  #$24,GameState_Ball_xNext(\1)
                         move.b                  #$27,GameState_Ball_yNext(\1)
                         move.b                  #$01,GameState_Ball_hlfSpd(\1)
-                        move.b                  #$00,GameState_Ball_hlfPhs(\1)
+                        move.b                  #$00,GameState_Ball_phase(\1)
+                        ; -- reset ball behavior to glue, but for only 1 rebound
+                        GameState_Ball_setBehavior \1,#BALL_BEHAVIOR_GLUE,\2
+                        move.w                  #0,GameState_Ball_bhvrTtl(\1)
                         ; wait around 0.6 seconds (at 50 Hz) before starting the ball
-                        move.b                  #30,GameState_Ball_freeze(\1)
+                        move.b                  #0,GameState_Ball_freeze(\1)
                         endm
 ;
 ;
@@ -493,7 +519,20 @@ RelaunchPlayer           macro
                         move.b                  #32,GameState_Player_xNext(\1)
                         move.b                  #5,GameState_Player_yNext(\1)
                         endm
-
+;
+;
+GameIsCleared           macro
+                        ; The level has been completed
+                        ; 1 - Ptr to the game state
+                        ; 2 - spare address register
+                        ; --
+                        ; a4 := spare register
+                        ExecSound               #Game_sndGameClear,\2
+                        ; -- the game is clear
+                        move.b                  #0,GameState_isOver(\1)
+                        move.b                  #0,GameState_isClear(\1)
+                        endm
+;
 ; ----------------------------------------------------------------------------------------------------------------
 ; before all
 ; ----------------------------------------------------------------------------------------------------------------
@@ -613,7 +652,8 @@ PhsGameBeforeEach:      ; ========
                         ; -- Init the ball
                         ; a6 := ptr to the game state
                         SetupHeapAddress        HposGameStateBase,a6
-                        RelaunchBall            a6
+                        ; d6 : spare data register
+                        RelaunchBall            a6,d6
                         ; 2 remaining balls
                         move.b                  #2,GameState_Ball_remning(a6)
                         ; -- Init the player
@@ -633,13 +673,37 @@ PhsGameBeforeEach:      ; ========
 ; ----------------------------------------------------------------------------------------------------------------
 PhsGameUpdate:
                         ; ======== ======== ======== ========
-                        ; -- is game not over ?
+                        ; -- is game done ?
                         ; a6 := the game state
                         SetupHeapAddress        HposGameStateBase,a6
+                        tst.b                   GameState_isClear(a6)
+                        ; -- if not game clear
+                        bne                     .checkGameOver
+                        ; -- else next level
+                        ; d7 := current level to update
+                        moveq                   #0,d7
+                        move.w                  GameState_Level_srcCur(a6),d7
+                        addq.w                  #1,d7
+                        cmp.w                   GameState_Level_srcSize(a6),d7
+                        ; -- if srcCur >= srcSize
+                        bpl                     .backToMenu
+                        ; -- else update current level, go back to play
+                        move.w                  d7,GameState_Level_srcCur(a6)
+                        ; a2 := subroutines
+                        move.l                  #PhsGameAfterEach,a2
+                        jsr                     (a2)
+                        move.l                  #PhsInitLevelBeforeEach,a2
+                        jsr                     (a2)
+                        move.l                  #PhsInitLevelUpdate,PtrNextUpdate
+                        move.l                  #PhsInitLevelRedraw,PtrNextRedraw
+                        rts
+
+.checkGameOver
                         tst.b                   GameState_isOver(a6)
                         bne                     .startUpdateBall
                         ; -- else end of game, go to the next phase
                         ; a2 := subroutines
+.backToMenu
                         move.l                  #PhsGameAfterEach,a2
                         jsr                     (a2)
                         move.l                  #PhsFadeToEndBeforeEach,a2
@@ -651,6 +715,13 @@ PhsGameUpdate:
                         rts
 .startUpdateBall        ; ======== ======== ======== ========
                         ; == Ball update
+                        ; -- check captive mode
+                        ; d7 := captive state
+                        moveq                   #0,d7
+                        move.b                  GameState_Ball_cptvState(a6),d7
+                        tst.b                   d7
+                        ; -- skip free ball update if not 0, the captive ball update happens after the player update.
+                        bne                     .startUpdatePlayer
                         ; ========
                         ; -- check freezing of the ball
                         ; d7 := freezing counter
@@ -700,7 +771,8 @@ PhsGameUpdate:
                         ; a4 := spare register
                         ExecSound               #Game_sndOhNo,a4
                         ; -- init ball position and freeze (copy from before each)
-                        RelaunchBall            a6
+                        ; d3 : spare data register
+                        RelaunchBall            a6,d3
                         rts
 .startMoveBallAlongY    ; ========
                         tst.b                   d7
@@ -832,6 +904,11 @@ PhsGameUpdate:
                         ; -- switch (d1)
                         dbf                     d1,.processBallReboundY
                         ; -- d1 : case 0
+                        ; -- There is no rebound when the ball has Juggernaut behaviour.
+                        ; d0 := ball behavior
+                        move.w                  GameState_Ball_behavior(a6),d0
+                        cmp.b                   #BALL_BEHAVIOR_JUGGERNAUT,d0
+                        beq                     .commitBall
                         ; -- do rebound x if bit 2 of d2 set or d2 == 2
                         ; d0 := d2 & %110 (6), nothing to do if 0
                         moveq                   #0,d0
@@ -839,12 +916,16 @@ PhsGameUpdate:
                         and.b                   #6,d0
                         beq                     .commitBall
 .doBallReboundX         ; ========
+                        ; -- There is no rebound when the ball has Juggernaut behaviour.
+                        ; d0 := ball behavior
+                        move.w                  GameState_Ball_behavior(a6),d0
+                        cmp.b                   #BALL_BEHAVIOR_JUGGERNAUT,d0
+                        beq                     .commitBall
                         ; d7 := -d7
                         neg.b                   d7
                         ; d6 := d6 + d7 + d7
                         add.b                   d7,d6
                         add.b                   d7,d6
-                        DoSoundBallRebound
                         bra                     .commitBall
                         ; ========
 .processBallReboundY    ; -- switch (d1)
@@ -879,26 +960,45 @@ PhsGameUpdate:
                         tst.b                   d7
                         ; -- if needed to force
                         bmi                     .forceXMove
-                        bra                     .doBallReboundYReally
+                        bra                     .doBallReboundYPaddle
 .isBumpOnLeft           cmp.b                   #3,d0
-                        bpl                     .doBallReboundYReally
+                        bpl                     .doBallReboundYPaddle
                         ; -- force dx to the left
                         tst.b                   d7
-                        bmi                     .doBallReboundYReally
+                        bmi                     .doBallReboundYPaddle
                         ; -- ... only if need to force
 .forceXMove             ; d7 := -d7
                         neg.b                   d7
                         ; d6 := d6 + 2 * d7
                         add.b                   d7,d6
                         add.b                   d7,d6
-.doBallReboundYReally:
+;
+.doBallReboundYPaddle:
                         ; -- do the rebound
                         ; d4 := -d4
                         neg.b                   d4
                         ; d3 := d3 + d4 + d4
                         add.b                   d4,d3
                         add.b                   d4,d3
+                        ; -- update behaviour
+                        ; d2 : spare data register
+                        GameState_Ball_updateBehavior a6,d2
+                        ; --
                         DoSoundBallRebound
+                        bra                     .commitBall
+
+.doBallReboundYReally:
+                        ; -- There is no rebound when the ball has Juggernaut behaviour.
+                        ; d0 := ball behavior
+                        move.w                  GameState_Ball_behavior(a6),d0
+                        cmp.b                   #BALL_BEHAVIOR_JUGGERNAUT,d0
+                        beq                     .commitBall
+                        ; -- do the rebound
+                        ; d4 := -d4
+                        neg.b                   d4
+                        ; d3 := d3 + d4 + d4
+                        add.b                   d4,d3
+                        add.b                   d4,d3
                         bra                     .commitBall
                         ; ========
 .processBallReboundXY   ; -- d1 : case 2
@@ -932,6 +1032,11 @@ PhsGameUpdate:
                         ; switch d2 : case 7
                         ; -> .doBallReboundXY
 .doBallReboundXY        ; --
+                        ; -- There is no rebound when the ball has Juggernaut behaviour.
+                        ; d0 := ball behavior
+                        move.w                  GameState_Ball_behavior(a6),d0
+                        cmp.b                   #BALL_BEHAVIOR_JUGGERNAUT,d0
+                        beq                     .commitBall
                         ; d7 := -d7
                         neg.b                   d7
                         ; d6 := d6 + d7 + d7
@@ -1034,8 +1139,105 @@ PhsGameUpdate:
                         move.b                  d4,GameState_Player_dy(a6)
 
                         ; ======== ======== ======== ========
+                        ; == update captive ball
+                        ; ========
+.doUpdateBallCaptive
+                        ; reuse d7 = Player.xNext and d6 = Player.yNext from previous section.
+                        ; -- check if ball is captive
+                        ; d3 := captive state
+                        moveq                   #0,d3
+                        move.b                  GameState_Ball_cptvState(a6),d3
+                        tst.b                   d3
+                        ; -- skip if free (0)
+                        beq                     .doUpdateLevel
+                        ; -- else
+                        ; -- update ball.nextY
+                        ; d5 := decrement (-1) and translate to full freedom matrix (+40)
+                        add.b                   #39,d5
+                        move.b                  d5,GameState_Ball_yNext(a6)
+                        ; -- poll joystick status
+                        ; a2 := Ptr to joystick states
+                        lea                     BufferJoystate,a2
+                        ; d2 := [j0,j1] combined in a word
+                        moveq                   #0,d2
+                        move.w                  (a2),d2
+                        ; -- test j1.fire
+                        btst.b                  #7,d2
+                        ; -- handle no fire
+                        beq                     .doCaptvHandleNoFire
+                        ; -- else handle fire
+                        cmp.b                   #BALL_CAPTV_WAIT_FIRE,d3
+                        ; -- skip if not in waiting for fire
+                        bne                     .doneCaptvHandleFire
+                        ; -- else update state
+                        move.b                  #BALL_CAPTV_WAIT_RELEASE,d3
+                        move.b                  d3,GameState_Ball_cptvState(a6)
+                        bra                     .doneCaptvHandleFire
+.doCaptvHandleNoFire
+                        cmp.b                   #BALL_CAPTV_WAIT_RELEASE,d3
+                        ; -- skip if not waiting fire release
+                        bne                     .doneCaptvHandleFire
+                        ; -- else update state
+                        move.b                  #BALL_CAPTV_FREE,d3
+                        move.b                  d3,GameState_Ball_cptvState(a6)
+.doneCaptvHandleFire
+                        ; -- if waiting for release fire, react to joystick left/right
+                        cmp.b                   #BALL_CAPTV_WAIT_RELEASE,d3
+                        ; -- skip if fire not pressed
+                        bne                     .doneCaptvHandleSteer
+                        ; -- else test j1.left
+                        btst.b                  #2,d2
+                        ; -- skip to handle right when joystick not to the left
+                        beq                     .doCaptvHandleRight
+                        ; -- else update ball target and direction
+                        move.b                  #BALL_POSCAPTV_LEFT,GameState_Ball_cptvPosT(a6)
+                        move.b                  #$ff,GameState_Ball_dx(a6)
+                        bra                     .doneCaptvHandleSteer
+.doCaptvHandleRight
+                        ; test j1.right
+                        btst.b                  #3,d2
+                        ; -- skip to handle right when joystick not to the left
+                        beq                     .doneCaptvHandleSteer
+                        ; -- else update ball target and direction
+                        move.b                  #BALL_POSCAPTV_RIGHT,GameState_Ball_cptvPosT(a6)
+                        move.b                  #1,GameState_Ball_dx(a6)
+.doneCaptvHandleSteer
+                        ; -- update relative position
+                        ; d3 := target position
+                        moveq                   #0,d3
+                        move.b                  GameState_Ball_cptvPosT(a6),d3
+                        ; d2 := current relative position
+                        moveq                   #0,d2
+                        move.b                  GameState_Ball_cptvPos(a6),d2
+                        cmp.b                   d3,d2
+                        ; -- skip update if not needed
+                        beq                     .doPlaceCaptiveBall
+                        ; -- else if current position < target position
+                        bmi                     .captiveBallGoesRight
+                        ; -- else target position < current position
+                        subq.b                  #1,d2
+                        move.b                  d2,GameState_Ball_cptvPos(a6)
+                        bra                     .doPlaceCaptiveBall
+.captiveBallGoesRight
+                        ; increment d2
+                        addq.b                  #1,d2
+                        move.b                  d2,GameState_Ball_cptvPos(a6)
+.doPlaceCaptiveBall
+                        ; -- update ball next x
+                        ; d7 := Player.xNext + Ball.captvPos = d7 + d2
+                        add.b                   d2,d7
+                        move.b                  d7,GameState_Ball_xNext(a6)
+                        ; ======== ======== ======== ========
                         ; == update level
                         ; ========
+.doUpdateLevel
+                        ; -- only if ball is not shallow
+                        ; FIXME
+                        ; d5 := behavior
+                        moveq                   #0,d5
+                        move.w                  GameState_Ball_behavior(a6),d5
+                        cmp.w                   #BALL_BEHAVIOR_SHALLOW,d5
+                        beq                     .doUpdateFreedomMatrix
                         ; REORDERING : a5 free
                         ; a4 := start of the list of the tiles to delete
                         lea                     GameState_Level_eraseList(a6),a4
@@ -1072,7 +1274,27 @@ PhsGameUpdate:
                         ; -- if no brick
                         beq                     .nextCldPoint
                         ; -- else store in list first tiles to erase, extends of the erasure, and pointers
+                        ; a1,d1,d0,a0 : spare registers
                         Game_scanBrkToDelete    a2,d2,d7,a1,d1,d0,a0
+                        ; -- before storing, find out whether the brick sprite offset is a locked exit
+                        ; d2 := sprite index
+                        moveq                   #0,d2
+                        move.w                  (a0),d2
+                        ; d0 := multicell bit #0 = (d2 >> 8) & 1
+                        move.l                  d2,d0
+                        lsr.w                   #8,d0
+                        and.b                   #1,d0
+                        ; d2 := sprite index minus multicell bit 0 = (d2 & $ff) - d0
+                        and.w                   #$ff,d2
+                        sub.b                   d0,d2
+                        ;
+                        cmp.b                   #BRICK_SPROFF_EXIT_OFF,d2
+                        ; -- if disabled exit, no deletion, next collision.
+                        beq                     .nextCldPoint
+                        ; -- else restore sprite offset, register tiles to erase and handle special bricks
+                        ; d2 := d2 + multicell bit #0
+                        add.b                   d0,d2
+                        ;
                         move.b                  d7,(a4)+
                         move.b                  d6,(a4)+
                         move.b                  d1,(a4)+
@@ -1082,9 +1304,103 @@ PhsGameUpdate:
                         ; -- update counter of bricks to delete
                         addq.b                  #1,d3
                         move.b                  d3,GameState_Level_cntToErase(a6)
-                        ; -- next
+                        ; -- FIXME update BrickStatus to avoid trouble when counting remaining bricks (may require save/restore registers)
+                        ; -- test the tile to erase for special effect
+                        cmp.b                   #BRICK_STAR_TILE_OFFSET,d2
+                        ; -- skip if not special brick
+                        bmi                     .nextCldPoint
+                        ; -- process disabled stars
+                        beq                     .hitDisabledStar
+                        ; -- convert to brick type
+                        ; d2 := (d2 - BRICK_TO_SPECIAL_OFFST)/2
+                        sub.w                   #BRICK_TO_SPECIAL_OFFST,d2
+                        lsr.l                   #1,d2
+                        ; -- select brick type
+                        tst.b                   d2
+                        bne                     .notEnabledStar
+                        ; -- case active star, decrement the remaining stars counter and test whether all stars has been collected
+                        ; d1 := remaining stars
+                        moveq                   #0,d1
+                        move.w                  GameState_Level_rmnStars(a6),d1
+                        subq.w                  #1,d1
+                        move.w                  d1,GameState_Level_rmnStars(a6)
+                        tst.w                   d1
+                        ; -- skip if there are still remaining stars
+                        bhi                     .nextCldPoint
+                        ; -- else level is cleared
+                        ; a2 : spare register
+                        GameIsCleared           a6,a2
+                        ; -- continue
+                        bra                     .nextCldPoint
+                        ; -- case enabled star
+.notEnabledStar
+                        ; -- select brick type
+                        cmp.b                   #BrickType_SHALLOW,d2
+                        bne                     .notShallowBrick
+                        ; -- case 'shallow' brick
+                        ; d1 := spare data register
+                        GameState_Ball_setBehavior a6,#BALL_BEHAVIOR_SHALLOW,d1
+                        ; -- continue
+                        bra                     .nextCldPoint
+.notShallowBrick
+                        ; -- select brick type
+                        cmp.b                   #BrickType_JUGGERNAUT,d2
+                        bne                     .notJuggernautBrick
+                        ; -- case 'Juggernaut' brick
+                        GameState_Ball_setBehavior a6,#BALL_BEHAVIOR_JUGGERNAUT,d1
+                        ; -- continue
+                        bra                     .nextCldPoint
+.notJuggernautBrick
+                        ; -- select brick type
+                        cmp.b                   #BrickType_GLUE,d2
+                        bne                     .notGlueBrick
+                        ; -- case 'Glue' brick
+                        GameState_Ball_setBehavior a6,#BALL_BEHAVIOR_GLUE,d1
+                        ; -- continue
+                        bra                     .nextCldPoint
+.notGlueBrick
+                        ; -- select brick type
+                        cmp.b                   #BrickType_EXIT,d2
+                        bne                     .notExitBrick
+                        ; -- case enabled exit brick : level clear
+                        ; a2 : spare register
+                        GameIsCleared           a6,a2
+                        ; -- continue
+                        bra                     .nextCldPoint
+.notExitBrick
+                        ; -- select brick type
+                        cmp.b                   #BrickType_KEY,d2
+                        bne                     .notKeyBrick
+                        ; -- case key : decrease remaining key, start unlocking exit if no more keys
+                        ; d1 := remaining keys, to decrement and update
+                        moveq                   #0,d1
+                        move.w                  GameState_Level_rmnKeys(a6),d1
+                        subq.w                  #1,d1
+                        ; -- skip if it remains more keys
+                        bne                     .hasRemainingKeys
+                        ; -- else activate unlocking of exit bricks
+                        move.b                  #1,GameState_Level_doneKeys(a6)
+                        move.b                  #10,GameState_Level_unlckRow(a6)
+                        ; -- init the pointer to the next cell to scan/unlock
+                        ; a1 := End of current level - 40 cells (word) = HposCurrentLvlBase + Size - 80
+                        SetupHeapAddress        HposCurrentLvlBase,a1
+                        lea                     SIZEOF_Level(a1),a1
+                        lea                     -80(a1),a1
+                        move.l                  a1,GameState_Level_ptrUnlckCell(a6)
+.hasRemainingKeys
+                        move.w                  d1,GameState_Level_rmnKeys(a6)
+.notKeyBrick
+                        ; -- continue
+                        bra                     .nextCldPoint
+.hitDisabledStar
+                        ; -- continue
                         bra                     .nextCldPoint
 .doneCldList
+                        ; -- do sound if some bricks have been broken this time
+                        tst.w                   d3
+                        ; skip if no break broken
+                        beq                     .doUpdateFreedomMatrix
+                        DoSoundBallRebound
                         ; -- Get count of remaining bricks
                         ; a4 := Ptr current level
                         SetupHeapAddress        HposCurrentLvlBase,a4
@@ -1097,11 +1413,8 @@ PhsGameUpdate:
                         ; -- skip if not level not clear
                         blo                     .doUpdateFreedomMatrix
                         ; -- else level is cleared
-                        ; a4 := spare register
-                        ExecSound               #Game_sndGameClear,a4
-                        ; -- the game is over
-                        move.b                  #0,GameState_isOver(a6)
-                        move.b                  #0,GameState_isClear(a6)
+                        ; a4 : spare register
+                        GameIsCleared           a6,a4
 
 
 
@@ -1237,6 +1550,8 @@ PhsGameUpdate:
                         dbf                     d7,.doEraseNextBrick
                         ; ======== ======== ======== ========
 
+
+
 .thatsAll               rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; redraw
@@ -1259,6 +1574,159 @@ PhsGameRedraw:          ; ========
                         move.l                  #0,(a4)+
                         lea                     152(a4),a4
                         endr
+.testForUnlockingExit
+                        ; ======== ======== ======== ========
+                        ; -- is there a row to scan for locked exit bricks ?
+                        ; d7 := doneKeys
+                        moveq                   #0,d7
+                        move.b                  GameState_Level_doneKeys(a6),d7
+                        tst.b                   d7
+                        ; -- skip if not done/disabled
+                        beq                     .startRedrawBricks
+                        ; -- else scan and convert/redraw next line
+                        ; d6 := previous Row (10 downto 0)
+                        moveq                   #0,d6
+                        move.b                  GameState_Level_unlckRow(a6),d6
+                        tst.b                   d6
+                        ; -- go to scan/convert/redraw if the previous row was not 0
+                        bne                     .doUnlockExitForRow
+                        ; -- else disable unlocking
+                        moveq                   #0,d7
+                        move.b                  d7,GameState_Level_doneKeys(a6)
+                        bra                     .startRedrawBricks
+.doUnlockExitForRow
+                        ; -- update row
+                        ; d7 := current row = d6 - 1
+                        move.l                  d6,d7
+                        subq.b                  #1,d7
+                        move.b                  d7,GameState_Level_unlckRow(a6)
+                        ; -- START scan/convert/redraw
+                        ; -- init ptr blitter list
+                        ; a4 := start of blit list
+                        SetupHeapAddress        HposBlitListBase,a4
+                        ; a3 := PtrBlitterList
+                        move.l                  #PtrBlitterList,a3
+                        move.l                  a4,(a3)
+                        ; a3 free
+                        ; -- setup sprite for tile 0 and tile 1 of exit brick
+                        ; a2 := start of sprite datas
+                        lea                     SpritesBricksDat,a2
+                        ; a3 := start of index tables
+                        lea                     IndexBricksTbl,a3
+                        ; d6 := Offset in index table for tile 0 = BRICK_SPROFF_EXIT * 2
+                        move.l                  #BRICK_SPROFF_EXIT,d6
+                        WdMul2                  d6
+                        ; d5 := Offset in index table for tile 1 = d6 + 2
+                        move.l                  d6,d5
+                        addq.w                  #2,d5
+                        ; d6 := address of tile 0 = a2 + word at (a3 + d6)
+                        move.w                  (a3,d6),d6
+                        add.l                   a2,d6
+                        ; d5 := address of tile 1 = a2 + word at (a3 + d5)
+                        move.w                  (a3,d5),d5
+                        add.l                   a2,d5
+                        ; a2,a3 free
+                        ; -- setup start line address
+                        ; a3 := table of offsets
+                        lea                     OffsTbl_RowScreenLines,a3
+                        ; d4 := offset for current row
+                        OffsTbl_getLongAtWdIndx a3,d7,d4
+                        ; a3 := start address of row screen line
+                        lea                     (a5,d4),a3
+                        ; d4 free
+                        ; -- setup start address in bricks cells
+                        ; a2 : pointer to the next cell
+                        move.l                  GameState_Level_ptrUnlckCell(a6),a2
+                        ; -------
+                        ; context so far
+                        ; a6 - ptr to Game state
+                        ; a5 - ptr to start of screen
+                        ; a4 - ptr to blit list
+                        ; a3 - pointer to current row address at screen memory
+                        ; a2 - pointer to next cell
+                        ; d7 - current row
+                        ; d6 - pointer to sprite 0
+                        ; d5 - pointer to sprite 1
+                        ;
+                        ; TODO
+                        ; --
+                        ;
+                        ;
+                        ; -------
+                        ; -- loop over each brick
+                        ; loop 40 times over d4
+                        moveq                   #0,d4
+                        move.w                  #39,d4
+                        ; d3 := offset for the sprite, will switch between #0 and #8
+                        moveq                   #0,d3
+                        bra                     .nextCellToScan_start
+.nextCellToScan
+                        ; -- book keeping after each iteration.
+                        InitLevel_updtNextTileRegs a3,d3
+.nextCellToScan_start
+                        ; -- get base sprite index
+                        ; d2 : sprite index base
+                        moveq                   #0,d2
+                        move.b                  1(a2),d2
+                        cmp.b                   #BRICK_SPROFF_EXIT_OFF,d2
+                        ; -- convert if unlocked exit brick
+                        beq                     .doUnlockBrick
+                        ; -- else next cell
+                        addq.l                  #2,a2
+                        dbf                     d4,.nextCellToScan
+                        bra                     .doneCellToScan
+.doUnlockBrick
+                        ; -- else convert this cell and the next one...
+                        move.l                  #$31413141,d1
+                        moveq                   #0,d1
+                        ; d2 := unlocked sprite index for the first tile = d2 - BRICK_DELTA_EXIT_OFF
+                        sub.b                   #BRICK_DELTA_EXIT_OFF,d2
+                        move.b                  d2,1(a2)
+                        ; d2 := unlocked sprite index for the next tile = d2 + 1
+                        addq.b                  #1,d2
+                        move.b                  d2,3(a2)
+                        ; d2 free
+                        ; -- ... and program the redraw in the blitter list
+                        ; -- put sprite 0 into blitter list
+                        ; d2 : working copy of d6
+                        move.l                  d6,d2
+                        ; a1 : working copy of a3
+                        move.l                  a3,a1
+                        ; d1 : spare data register
+                        InitLevel_PushFirstBb   d2,a1,d3,a4,d1
+                        rept 3
+                        addq.l                  #2,d2
+                        addq.l                  #2,a1
+                        InitLevel_PushNextBb    d2,a1,a4
+                        endr
+                        ; -- put sprite 1 into blitter list
+                        ; d2 : working copy of d6
+                        move.l                  d5,d2
+                        ; update values of a3,d3
+                        InitLevel_updtNextTileRegs a3,d3
+                        ; a1 : working copy of a3
+                        move.l                  a3,a1
+                        ; d1 : spare data register
+                        InitLevel_PushFirstBb   d2,a1,d3,a4,d1
+                        rept 3
+                        addq.l                  #2,d2
+                        addq.l                  #2,a1
+                        InitLevel_PushNextBb    d2,a1,a4
+                        endr
+                        ; -- skip next brick cell then continue
+                        addq.l                  #4,a2
+                        subq.w                  #1,d4
+                        dbf                     d4,.nextCellToScan
+                        ; -- done
+.doneCellToScan
+                        ; -- terminate blitter list
+                        move.w                  #0,(a4)
+                        ; -- setup pointer to next previous line
+                        ; a2 -= 160 (it has advanced by 40 cells, must go back, and then go back 40 cells back for previous line)
+                        lea                     -160(a2),a2
+                        move.l                  a2,GameState_Level_ptrUnlckCell(a6)
+                        ; -- Ready to blit
+                        _Supexec                #BlitRunList
 .startRedrawBricks      ; ======== ======== ======== ========
                         ; == Redraw (erase only) bricks
                         ; d7 := number of bricks to erase
@@ -1573,7 +2041,7 @@ RedrawBall:
                         ; -- offset to first line
                         ; d7 := from newY to offset
                         ; d2 := temp
-                        ModelToScreenY           GameState_Ball_yNext(a6),d7,d2
+                        ModelToScreenY          GameState_Ball_yNext(a6),d7,d2
                         cmp.l                   #32000,d7
                         ; -- if out of screen
                         bpl                     .commitBall
@@ -1590,8 +2058,34 @@ RedrawBall:
                         ; a2 := a3 (dest)
                         move.l                  a3,a2
                         ; a3 := sprite ball
-                        move.l                  #SpritesDat,a3
-                        lea                     DatSprtsBallBase(a3),a3
+                        move.l                  #SpritesBallsDat,a3
+                        ; -- blink the ball between normal and behavior during last period
+                        ; d2 := offset to sprite, default to 0
+                        moveq                   #0,d2
+                        ; d1 := behavior
+                        moveq                   #0,d1
+                        move.w                  GameState_Ball_behavior(a6),d1
+                        tst.w                   d1
+                        ; -- skip if normal behavior
+                        beq                     .setBallSprtOffset
+                        ; -- else check behavior ttl
+                        ; d1 := behavior ttl
+                        move.w                  GameState_Ball_bhvrTtl(a6),d1
+                        tst.w                   d1
+                        ; -- use sprite offset if not 0
+                        bne                     .useSpriteOffset
+                        ; -- else check bit #2 of phase
+                        ; d1 := phase
+                        moveq                   #0,d1
+                        move.b                  GameState_Ball_phase(a6),d1
+                        btst.l                  #3,d1
+                        ; -- skip if bit is set
+                        beq                     .setBallSprtOffset
+                        ; -- else
+.useSpriteOffset
+                        move.w                  GameState_Ball_sprOffst(a6),d2
+.setBallSprtOffset
+                        lea                     (a3,d2),a3
                         ; d1 := d6 * 4
                         move.w                  d6,d1
                         WdMul4                  d1
@@ -1615,8 +2109,7 @@ RedrawBall:
                         ; a2 := start of the display = a5 + 196 * 160 = a5 + 31360
                         lea                     31360(a5),a2
                         ; a3 := sprite ball
-                        move.l                  #SpritesDat,a3
-                        lea                     DatSprtsBallBase(a3),a3
+                        move.l                  #SpritesBallsDat,a3
                         ; d1 := 0
                         move.w                  #0,d1
                         bsr.w                   ExecShowBall

@@ -36,15 +36,31 @@ OffsTbl_ScreenLines
                         dc.l 30720,30880,31040,31200,31360,31520,31680,31840
 ;
 ;
-OffsTbl_getLongAtWdIndx   macro
-                        ; Get the long value at the given index from the first element.
-                        ; 1 - address register, ptr to the table
-                        ; 2 - const, index (word)
-                        ; 3 - spare data => result
-                        ; --
-                        ; \3 := displacement = 4 * \2
-                        moveq                   #0,\3
-                        move.w                  \2,\3
-                        LgMul4                  \3
-                        move.l                  (\1,\3),\3
-                        endm
+OffsTbl_RowScreenLines
+                        ; Table of offset for each 'row' (group of 8 lines) of a 'regular' st color screen (32k continuous)
+                        dc.l 0
+                        dc.l 1280
+                        dc.l 2560
+                        dc.l 3840
+                        dc.l 5120
+                        dc.l 6400
+                        dc.l 7680
+                        dc.l 8960
+                        dc.l 10240
+                        dc.l 11520
+                        dc.l 12800
+                        dc.l 14080
+                        dc.l 15360
+                        dc.l 16640
+                        dc.l 17920
+                        dc.l 19200
+                        dc.l 20480
+                        dc.l 21760
+                        dc.l 23040
+                        dc.l 24320
+                        dc.l 25600
+                        dc.l 26880
+                        dc.l 28160
+                        dc.l 29440
+                        dc.l 30720
+;

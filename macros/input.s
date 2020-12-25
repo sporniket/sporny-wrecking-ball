@@ -19,6 +19,11 @@ _Kbdvbase               macro
 _Cconis                 macro
                         ___gemdos               11,2
                         endm
+;
+_Cconin                 macro
+                        ; Read a character from the standard input device.
+                        ___gemdos               1,2
+                        endm
 
 IsWaitingKey            macro
                         ; The CCR will be setup for beq.s
@@ -28,6 +33,18 @@ IsWaitingKey            macro
 
 WaitInp                 macro
                         ___gemdos               7,2
+                        endm
+
+FlushInp                macro
+                        ; read and discards any char from input.
+                        ; a0-a2/d0-d2 should be saved beforehand
+                        ; --
+.hasInput\@
+                        IsWaitingKey
+                        beq                     .thatsAll\@
+                        _Cconin
+                        bra                     .hasInput\@
+.thatsAll\@
                         endm
 
 SaveSysIkbdHandler      macro

@@ -2,12 +2,12 @@
 AS="vasmm68k_mot"
 ASARGS="-Ftos -devpac -warncomm -ldots"
 TARGETDIR="$(pwd)/build"
-TARGETPRG="sheetext.prg"
+TARGETPRG="check_hw.prg"
 
 [ ! -d $TARGETDIR ] && echo "Make dir $TARGETDIR" && mkdir -p $TARGETDIR
 
 # proceed
 set -x
-$AS $ASARGS -o $TARGETPRG sheetext.s
+$AS $ASARGS -o $TARGETPRG check_hw.s
 mv $TARGETPRG $TARGETDIR
 set +x

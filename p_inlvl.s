@@ -48,13 +48,13 @@ InitLevel_BlitFadeClr   macro
                         ; -- setup masks
                         move.w                  #$ffff,(\2)+
                         move.w                  #$ffff,(\2)+
-                        move.w                  #$ffff,(\2)+
+                        move.w                  #$0000,(\2)+            ; !!! clear endmask 1 and add 1 to y count to get expected blit
                         ; -- setup Dest
                         move.w                  FadeClr_DestIncX(\1),(\2)+
                         move.w                  FadeClr_DestIncY(\1),(\2)+
                         move.l                  FadeClr_PtrDest(\1),(\2)+
                         ; -- setup x/y counts
-                        move.w                  #80,(\2)+
+                        move.w                  #81,(\2)+               ; !!! clear endmask 1 and add 1 to y count to get expected blit
                         move.w                  FadeClr_CountY(\1),(\2)+
                         ; -- Hop/op values
                         move.w                  #$0203,(\2)+ ; HOP = 2 (source), OP = 3 (source)
@@ -63,21 +63,6 @@ InitLevel_BlitFadeClr   macro
                         endm
 ;
 
-;
-InitLevel_BlitFadeClr2   macro
-                        ; 1 - address register, to FadeClr instance
-                        ; 2 - address register, to the blit list
-                        ; --
-                        ; This is a blit item opcode 3
-                        move.w                  #3,(\2)+
-                        ; -- Setup Source
-                        move.l                  FadeClr_PtrSrc2(\1),(\2)+                ; source address
-                        ; -- setup Dest
-                        move.l                  FadeClr_PtrDest2(\1),(\2)+
-                        ; -- setup y counts
-                        move.w                  FadeClr_CountY2(\1),(\2)+
-                        endm
-;
 ;
 InitLevel_PushFirstBb   macro
                         ; put first brick blit ('bb') item into the blit list.
@@ -165,18 +150,23 @@ InitLevel_execFadeClr
                         ; -- setup blit list
                         ; a4,d6 : spare register
                         InitLevel_BlitFadeClr   a6,a5
-                        ; d6 := count y 2 (workaround blitter glitch)
-                        moveq                   #0,d6
-                        move.w                  FadeClr_CountY2(a6),d6
-                        tst.w                   d6
-                        beq.s                   .doneList
-                        InitLevel_BlitFadeClr2  a6,a5
                         ; -- end of blit list
-.doneList
                         move.w                  #0,(a5)+
                         _Supexec                #BlitRunList
                         rts
-
+;
+;
+InitLevel_updtNextTileRegs macro
+                        ; maintain a shift value and target address for consecutive display of tiles ; address is incremented by 16 pixels (8 bytes) when shift value goes back to 0.
+                        ; 1 - address register, destination screen memory
+                        ; 2 - data register, long, shift value (0 or 8) (the long only means that the register is devoted to the shift value)
+                        ; --
+                        ; since \2 is either 0 or 8, and since \1 is incremented by 8 when \2 goes from 8 to 0, use \2 as increment of \1
+                        add.l                   \2,\1 ; maybe lea (0,\2,\1.w),\1 ?
+                        ; \2 = (\2 + 8) % 16 = (\2 + 8) & 15
+                        addq.w                  #8,\2
+                        and.w                   #$f,\2
+                        endm
 ; ----------------------------------------------------------------------------------------------------------------
 ; before all
 ; ----------------------------------------------------------------------------------------------------------------
@@ -205,32 +195,69 @@ PhsInitLevelBeforeEach:
                         ; a6 := transition to setup
                         DerefPtrToPtr           InitLevel_PtrFadeClr,a6
                         ; (init all but the screen address)
-                        FadeClr_init            a6,SpritesLinesDat,2,-160,0,0,0,2,-1600,1280,-160,0,-5760,d7
+                        FadeClr_init            a6,SpritesLinesDat,2,-160,0,0,0,2,-1600,1280,-160
                         ; retrieve the start address of the screen
                         _Logbase
                         move.l                  d0,FadeClr_Dest(a6)
                         move.l                  d0,FadeClr_PtrDest(a6)
-                        add.l                   #-5760,d0
-                        move.l                  d0,FadeClr_PtrDest2(a6)
+                        ; -- Find out current level data
+                        ; a6 := game state
+                        SetupHeapAddress        HposGameStateBase,a6
+                        ; a5 := ptr actual level to load
+                        ;move.l                  #$31413141,a5
+                        move.w                  GameState_Level_srcCur(a6),a5
+                        WdMul4                  a5
+                        add.l                   GameState_Level_srcPtr(a6),a5
                         ; -- load level data into current level
                         ; a6 := current level memory area
                         SetupHeapAddress        HposCurrentLvlBase,a6
-                        ; a5 := actual level to load
-                        ; TODO : Ptr to current level data, for now fixed
-                        lea                     DatLevel0,a5
+                        ; a5 := level data
+                        move.l                  (a5),a5
                         ; a4,d7,d6,d5,d4,d3 : spare registers
                         Level_init_v0           a5,a6,a4,d7,d6,d5,d4,d3,d2
+                        ; ======
+                        ; -- reinstate game state into a6, move level structure pointer to a5
+                        ; a5 := current level memory area
+                        move.l                  a6,a5
+                        ; a6 := game state
+                        SetupHeapAddress        HposGameStateBase,a6
+                        ; -- post load : initialize downcounters and clear conditions
+                        ; d6 := level clearing conditions initialized to 0 (MUST clear all the bricks)
+                        moveq                   #0,d6
+                        ; d5 := count of bricks of type STAR
+                        moveq                   #0,d5
+                        move.w                  Level_CntStars(a5),d5
+                        move.w                  d5,GameState_Level_rmnStars(a6)
+                        tst.w                   d5
+                        ; -- skip condition if no stars
+                        beq                     .noStarToCollect
+                        ; -- else update clearing conditions
+                        or.b                    #LEVEL_CLRCOND_STARS,d6
+.noStarToCollect
+                        ; d5 : count of bricks of type EXIT
+                        moveq                   #0,d5
+                        move.w                  Level_CntKeys(a5),d5
+                        move.w                  d5,GameState_Level_rmnKeys(a6)
+                        tst.w                   d5
+                        ; -- skip condition if no keys
+                        beq                     .noKeyToCollect
+                        or.b                    #LEVEL_CLRCOND_EXIT,d6
+                        move.b                  d6,GameState_Level_clrCond(a6)
+                        move.b                  #0,GameState_Level_actExit(a6)
+                        ; -- replace exit tiles by disabled exit tiles
+                        ; a4,d4,d3,d2,d1 : spare registers
+                        Level_init_disableBricks a5,a4,d4,d3,d2,d1
+                        ; -- reset handling of all keys collected
+                        move.b                  #0,GameState_Level_doneKeys(a6)
+                        move.b                  #0,GameState_Level_unlckRow(a6)
+.noKeyToCollect
                         ; -- init line counter
                         move.w                  #0,InitLevel_LvlLine
                         ; -- init ptr to cell
                         ; a3 : ptr to first cell
-                        lea                     Level_Bricks(a6),a3
+                        lea                     Level_Bricks(a5),a3
                         move.l                  a3,InitLevel_PtrCell
                         ;
-                        ;
-                        ; -- clear screen (workaround blitter glitch that cannot override some pixels during fade effect ???)
-                        ; // STUDY ME !!! THERE MUST BE SOMETHING FISHY IN MY CODE... IT HAS TO !
-                        Print                   vt52ClearScreen
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; update

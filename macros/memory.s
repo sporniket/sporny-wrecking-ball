@@ -119,3 +119,16 @@ DerefOffPtrToPtr        macro
                         move.l                  (\2),\2
                         endm
 ; TODO : dereference using immediate value (addq #\x or lea \x(\2))
+;
+OffsTbl_getLongAtWdIndx   macro
+                        ; Get the long value at the given index from the first element.
+                        ; 1 - address register, ptr to the table
+                        ; 2 - const, index (word)
+                        ; 3 - spare data => result
+                        ; --
+                        ; \3 := displacement = 4 * \2
+                        moveq                   #0,\3
+                        move.w                  \2,\3
+                        LgMul4                  \3
+                        move.l                  (\1,\3),\3
+                        endm

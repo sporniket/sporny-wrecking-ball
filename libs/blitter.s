@@ -35,7 +35,7 @@
 
 ; Opcode 1 : Setup halftone pattern
 BlitRunItem_1:
-                        move.l                  #BlitterBase,a4
+                        move.w                  #BlitterBase,a4
                         rept 8
                         move.l                  (a5)+,(a4)+
                         endr
@@ -44,7 +44,7 @@ BlitRunItem_1:
 
 ; Opcode 2 : Blit with full setup
 BlitRunItem_2:
-                        move.l                  #BlitterBase,a4
+                        move.w                  #BlitterBase,a4
                         lea                     Blitter_SrcIncX(a4),a4
                         rept 7
                         move.l                  (a5)+,(a4)+
@@ -63,7 +63,7 @@ BlitRunItem_2:
 
 ; Opcode 3 : Blit again
 BlitRunItem_3:
-                        move.l                  #BlitterBase,a4
+                        move.w                  #BlitterBase,a4
                         move.l                  (a5)+,Blitter_SrcAddress(a4)
                         move.l                  (a5)+,Blitter_DestAddress(a4)
                         move.w                  (a5)+,Blitter_CountY(a4)
