@@ -1,0 +1,3 @@
+[submodule "00_commons/macros"]
+	path = 00_commons/macros
+	url = https://github.com/sporniket/as68k-macros-collection-atarist.git
