@@ -46,6 +46,14 @@ _OLD_ENVIRONMENT_PATH="$PATH"
 PATH="$release_topdir_abs/zz_tools/ap_cli:$PATH"
 export PATH
 
+if [ -f "environment.local" ]; then
+  echo "sourcing environment.local ..."
+  source environment.local
+  echo "Gemdos drive folder : ${GEMDOS_DRIVE}"
+  echo "Autorun folder : ${AUTORUN_FOLDER}"
+else
+  echo "Use 'ap setup' to initialize environment.local !"
+fi
 # shortname for the cli
 alias ap='ap.bash'
 
