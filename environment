@@ -68,26 +68,32 @@ export LOG_FATAL="\e[1;101mFATAL\e[0m --"
 log_trace() {
   echo -e "${LOG_TRACE} $1"
 }
+export -f log_trace
 
 log_info() {
   echo -e "${LOG_INFO} $1"
 }
+export -f log_info
 
 log_ok() {
   echo -e "${LOG_OK} $1"
 }
+export -f log_ok
 
 log_warn() {
   echo -e "${LOG_WARN} $1"
 }
+export -f log_warn
 
 log_error() {
   echo -e "${LOG_ERROR} $1"
 }
+export -f log_error
 
 log_fatal() {
   echo -e "${LOG_FATAL} $1"
 }
+export -f log_fatal
 
 # This should detect bash and zsh, which have a hash command that must
 # be called to get it to forget past commands.  Without forgetting
