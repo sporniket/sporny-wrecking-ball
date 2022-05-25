@@ -21,10 +21,12 @@ log_info "Creating ${FILE_INSTALL_DIR_MK}..."
 echo -e "INSTALLDIR = ${1}/build/${install_dir}" > "${FILE_INSTALL_DIR_MK}"
 cat ${FILE_INSTALL_DIR_MK}
 log_info "Creating ${FILE_ENV_LOCAL}..."
-echo -e "export GEMDOS_DRIVE=\"${1}/build\"" > "${FILE_ENV_LOCAL}"
-echo -e "export AUTORUN_FOLDER=\"${1}/build/${install_dir}\"" >> "${FILE_ENV_LOCAL}"
+echo -e "
+export GEMDOS_DRIVE=\"${1}/build\"
+export AUTORUN_FOLDER=\"${1}/build/${install_dir}\"
+export HATARI_FLAGS=\"--machine ste --fullscreen --tos-res med --harddrive '${1}/build/${install_dir}'\"
+" > "${FILE_ENV_LOCAL}"
 cat ${FILE_ENV_LOCAL}
 . ${FILE_ENV_LOCAL}
 
 log_ok "Done"
-echo "---"
