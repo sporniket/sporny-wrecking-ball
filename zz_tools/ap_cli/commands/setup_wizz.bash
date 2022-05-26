@@ -10,7 +10,26 @@ setup_wizz_help() {
 "
 }
 
+require() {
+  ### checks that a command exists or print a message
+  if ! command -v ${1} &> /dev/null
+  then
+    log_error "Command '${1}' not found. Use 'ap install ${1}'."
+  fi
+}
+
 setup_wizz_help
+
+log_info "Checking for required commands..."
+
+CHECK_COMMAND="$(require hatari)"
+CHECK_COMMAND="${CHECK_COMMAND}$(require vasm)"
+
+if [[ ${CHECK_COMMAND} ]]; then
+  echo -e "${CHECK_COMMAND}"
+  log_fatal "Aborting setup"
+  exit 1
+fi
 touch "${FILE_INSTALL_DIR_MK}"
 echo -n -e "\e[96mName of the project folder in the GEMDOS drive : \e[0m"
 read install_dir
