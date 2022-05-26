@@ -11,6 +11,7 @@ ap_help() {
 \e[96mCommands:\e[0m
   \e[93minstall\e[0m   Install vasm, hatari,...
   \e[93msetup\e[0m     CLI Setup utility
+  \e[93mscandeps\e[0m  scan source files into makefile dependencies variables
   \e[93mbuild\e[0m     CLI Build command
   \e[93mrun\e[0m       CLI program launcher
   \e[93m*\e[0m         Help
@@ -24,6 +25,9 @@ case "$1" in
     ;;
   setup)
     "$AP_WORKDIR/commands/setup_wizz.bash" "$(pwd)"
+    ;;
+  scandeps)
+    "$AP_WORKDIR/commands/scandeps.bash"
     ;;
   build)
     "$AP_WORKDIR/commands/build.bash" "${2}"
