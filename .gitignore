@@ -3,3 +3,8 @@
 # local artefacts
 *.local
 install_dir.mk
+
+# external tools and binaries
+zz_tools/bin
+zz_tools/vasm
+zz_tools/vlink

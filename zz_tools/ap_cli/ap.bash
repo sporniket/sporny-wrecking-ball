@@ -9,6 +9,7 @@ ap_help() {
 
 \e[96mUsage:\e[0m ${cli_name} \e[93m[command]\e[0m
 \e[96mCommands:\e[0m
+  \e[93minstall\e[0m   Install vasm, hatari,...
   \e[93msetup\e[0m     CLI Setup utility
   \e[93mbuild\e[0m     CLI Build command
   \e[93mrun\e[0m       CLI program launcher
@@ -18,6 +19,9 @@ ap_help() {
 }
 
 case "$1" in
+  install)
+    "$AP_WORKDIR/commands/install.bash" "${2}"
+    ;;
   setup)
     "$AP_WORKDIR/commands/setup_wizz.bash" "$(pwd)"
     ;;

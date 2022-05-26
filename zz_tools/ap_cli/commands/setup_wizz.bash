@@ -12,9 +12,11 @@ setup_wizz_help() {
 
 require() {
   ### checks that a command exists or print a message
+  # $1 : command to check
+  # $2 : component name to give to install
   if ! command -v ${1} &> /dev/null
   then
-    log_error "Command '${1}' not found. Use 'ap install ${1}'."
+    log_error "Command '${1}' not found. Use 'ap install ${2}'."
   fi
 }
 
@@ -23,7 +25,7 @@ setup_wizz_help
 log_info "Checking for required commands..."
 
 CHECK_COMMAND="$(require hatari)"
-CHECK_COMMAND="${CHECK_COMMAND}$(require vasm)"
+CHECK_COMMAND="${CHECK_COMMAND}$(require vasmm68k_mot vasm)"
 
 if [[ ${CHECK_COMMAND} ]]; then
   echo -e "${CHECK_COMMAND}"

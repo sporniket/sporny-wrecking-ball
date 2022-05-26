@@ -43,7 +43,7 @@ else
 fi
 
 _OLD_ENVIRONMENT_PATH="$PATH"
-PATH="$release_topdir_abs/zz_tools/ap_cli:$PATH"
+PATH="$release_topdir_abs/zz_tools/bin:$release_topdir_abs/zz_tools/ap_cli:$PATH"
 export PATH
 
 if [ -f "environment.local" ]; then
