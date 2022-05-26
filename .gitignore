@@ -2,7 +2,7 @@
 
 # local artefacts
 *.local
-install_dir.mk
+*.local.mk
 
 # external tools and binaries
 zz_tools/bin

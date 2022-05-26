@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 CMD_WORKDIR=$(cd $(dirname $0) && pwd)
-FILE_INSTALL_DIR_MK="${1}/install_dir.mk"
+FILE_INSTALL_DIR_MK="${1}/install_dir.local.mk"
 FILE_ENV_LOCAL="${1}/environment.local"
 setup_wizz_help() {
   cli_name=${0##*/}
