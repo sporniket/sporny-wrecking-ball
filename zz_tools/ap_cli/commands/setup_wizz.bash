@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 CMD_WORKDIR=$(cd $(dirname $0) && pwd)
-FILE_INSTALL_DIR_MK="${1}/install_dir.local.mk"
+FILE_FOLDERS_MK="${1}/folders.local.mk"
 FILE_ENV_LOCAL="${1}/environment.local"
 setup_wizz_help() {
   cli_name=${0##*/}
@@ -32,15 +32,18 @@ if [[ ${CHECK_COMMAND} ]]; then
   log_fatal "Aborting setup"
   exit 1
 fi
-touch "${FILE_INSTALL_DIR_MK}"
+touch "${FILE_FOLDERS_MK}"
 echo -n -e "\e[96mName of the project folder in the GEMDOS drive : \e[0m"
 read install_dir
 
 [[ ! -d "${1}/build/${install_dir}" ]] && mkdir -p ${1}/build/${install_dir} && log_ok "Created install folder '${1}/build/${install_dir}'"
 
-log_info "Creating ${FILE_INSTALL_DIR_MK}..."
-echo -e "INSTALLDIR = ${1}/build/${install_dir}" > "${FILE_INSTALL_DIR_MK}"
-cat ${FILE_INSTALL_DIR_MK}
+log_info "Creating ${FILE_FOLDERS_MK}..."
+echo -e "
+INSTALLDIR = ${1}/build/${install_dir}
+INCLUDEDIR_COMMONS = ${1}/00_commons
+" > "${FILE_FOLDERS_MK}"
+cat ${FILE_FOLDERS_MK}
 log_info "Creating ${FILE_ENV_LOCAL}..."
 echo -e "
 export GEMDOS_DRIVE=\"${1}/build\"
