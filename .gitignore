@@ -3,6 +3,7 @@
 # local artefacts
 *.local
 *.local.mk
+build
 
 # external tools and binaries
 zz_tools/bin

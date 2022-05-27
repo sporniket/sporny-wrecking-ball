@@ -165,7 +165,7 @@ PhsMenuUpdate:
                         moveq                   #0,d7
                         move.w                  Menu_Phase(a6),d7
                         ; select phase -- case not 0
-                        dbf.s                   d7,.waitFireRelease
+                        dbf                     d7,.waitFireRelease
                         ; -- else next phase
                         ; a2 := address to jump to
                         move.l                  #PhsMenuAfterEach,a2
@@ -176,13 +176,13 @@ PhsMenuUpdate:
                         move.l                  #PhsInitLevelRedraw,PtrNextRedraw
                         bra.w                   .thatsAll
                         ; select phase -- case not 1
-.waitFireRelease        dbf.s                   d7,.waitFirePress
+.waitFireRelease        dbf                     d7,.waitFirePress
                         ; -- poll joystick status
                         ; a0 := Ptr to joystick states
                         lea                     BufferJoystate,a0
                         ; d5 := [j0,j1] combined in a word
                         move.w                  (a0),d6
-                        btst.w                  #7,d6
+                        btst                    #7,d6
                         ; -- if fire is pressed
                         bne.s                   .thatsAll
                         ; -- else next state is 0
@@ -191,14 +191,14 @@ PhsMenuUpdate:
                         move.w                  d7,Menu_PhaseNext(a6)
                         bra.s                   .thatsAll
                         ; select phase -- case not 2
-.waitFirePress          dbf.s                   d7,.runTransition
+.waitFirePress          dbf                     d7,.runTransition
                         ;
                         ; -- poll joystick status
                         ; a0 := Ptr to joystick states
                         lea                     BufferJoystate,a0
                         ; d5 := [j0,j1] combined in a word
                         move.w                  (a0),d6
-                        btst.w                  #7,d6
+                        btst                    #7,d6
                         ; -- if fire is not pressed
                         beq.s                   .thatsAll
                         ; -- else next state is 1
@@ -273,16 +273,16 @@ PhsMenuRedraw:
                         move.w                  Menu_Phase(a6),d7
                         ; __unless case 0
 .BEGIN_select_000003__p_menu__case_0
-                        dbf.s                   d7,.BEGIN_select_000003__p_menu__case_1
+                        dbf                     d7,.BEGIN_select_000003__p_menu__case_1
                         rts
                         ; __unless case 1
 .BEGIN_select_000003__p_menu__case_1
-                        dbf.s                   d7,.BEGIN_select_000003__p_menu__case_2
+                        dbf                     d7,.BEGIN_select_000003__p_menu__case_2
                         ; __break
                         bra.s                   .END_select_000003__p_menu
                         ; __unless case 2
 .BEGIN_select_000003__p_menu__case_2
-                        dbf.s                   d7,.BEGIN_select_000003__p_menu__default
+                        dbf                     d7,.BEGIN_select_000003__p_menu__default
                         ; __break
                         bra.s                   .END_select_000003__p_menu
                         ; __default

@@ -198,7 +198,7 @@ Level_init_v0           macro ; (from,this)
                         and.b                   #%11,\8
                         ; \7 := cell type
                         lsr.b                   #2,\7
-                        btst.b                   #1,\8
+                        btst                     #1,\8
                         ; -- skip if not start of brick
                         beq                     .notStartOfBrick\@
                         Level_incField          Level_CntBrkabl,\2,\9
@@ -217,7 +217,7 @@ Level_init_v0           macro ; (from,this)
                         move.w                  \7,\9
                         WdMul2                  \7
                         add.w                   #21,\7
-                        btst.b                  #0,\8
+                        btst                    #0,\8
                         beq.s                   .writeCell\@
                         ; -- consume \9 to update counters for keys and exits
                         cmp.w                   #BrickType_KEY,\9
@@ -246,9 +246,9 @@ Level_init_v0           macro ; (from,this)
 .writeCell\@
                         move.b                  \8,(\3)+                ; multicell bits
                         move.b                  \7,(\3)+                ; sprite index
-                        dbf.s                   \6,.nextCell\@
+                        dbf                     \6,.nextCell\@
                         ; end of line...
-                        dbf.s                   \4,.nextLine\@
+                        dbf                     \4,.nextLine\@
                         endm
 ; ================================================================================================================
 Level_init_disableBricks macro

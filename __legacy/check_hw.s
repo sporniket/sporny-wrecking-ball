@@ -136,10 +136,10 @@ CheckBlitter:
                         ;
                         Print                   messBlitter
                         PrintChar               d6
-                        btst.b                  #1,d7
+                        btst                    #1,d7
                         beq.w                   .ko
                         Print                   messOk
-                        btst.b                  #0,d7
+                        btst                    #0,d7
                         beq.s                   .switchOn
                         Print                   messNewLine
                         moveq                   #1,d0

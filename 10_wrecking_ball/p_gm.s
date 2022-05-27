@@ -449,7 +449,7 @@ Game_scanBrkToDelete  macro
                         ; -- scan to the left first
                         ; \7 := init cursor to next cell (take predecrement into account)
                         move.l                  \1,\7
-                        btst.w                  #9,\2
+                        btst                    #9,\2
                         bne                     .doneLeft\@
 .nextLeft\@
                         ; update \5
@@ -458,19 +458,19 @@ Game_scanBrkToDelete  macro
                         subq.b                  #1,\3
                         ; \6 := cell value
                         move.w                  -(\7),\6
-                        btst.w                  #9,\6
+                        btst                    #9,\6
                         beq                     .nextLeft\@
 .doneLeft\@
                         ; \4 := init cursor to next cell (take postincrement into account)
                         lea                     2(\1),\4
-                        btst.w                  #8,\2
+                        btst                    #8,\2
                         bne                     .doneScanToRight\@
 .nextRight\@
                         ; update \5
                         addq.b                  #1,\5
                         ; \6 := cell value
                         move.w                  (\4)+,\6
-                        btst.w                  #8,\6
+                        btst                    #8,\6
                         beq                     .nextRight\@
 .doneScanToRight\@
                         endm
@@ -788,7 +788,7 @@ PhsGameUpdate:
                         bhi                     .doMoveBallAlongY
                         ; -- else rebound to go down
                         moveq                   #1,d7
-                        bclr.b                  #1,d5                   ; mark rebound on y as done
+                        bclr                    #1,d5                   ; mark rebound on y as done
                         DoSoundBallRebound
                         bra                     .doMoveBallAlongY
 .tryMoveBallDown        ; ========
@@ -820,7 +820,7 @@ PhsGameUpdate:
                         bhi                     .doMoveBallAlongX
                         ; -- else rebound to go right
                         moveq                   #1,d7
-                        bclr.b                  #0,d5                    ; mark rebound along x as done
+                        bclr                    #0,d5                    ; mark rebound along x as done
                         DoSoundBallRebound
                         bra                     .doMoveBallAlongX
 .tryMoveBallRight       ; ========
@@ -829,7 +829,7 @@ PhsGameUpdate:
                         bmi                     .doMoveBallAlongX
                         ; -- else rebound to go left
                         moveq                   #-1,d7
-                        bclr.b                  #0,d5                    ; mark rebound along x as done
+                        bclr                    #0,d5                    ; mark rebound along x as done
                         DoSoundBallRebound
 .doMoveBallAlongX       ; ========
                         ; d6 := next x = x + dx
@@ -1077,13 +1077,13 @@ PhsGameUpdate:
                         ; -- Compution of dy
                         ; ========
                         ; -- j1.up == 0 ?
-                        btst.b                  #0,d3
+                        btst                    #0,d3
                         beq                     .tstMoveDown
                         ; -- else moving up
                         subq.b                  #1,d4
                         ; ========
                         ; -- j1.down == 0 ?
-.tstMoveDown            btst.b                  #1,d3
+.tstMoveDown            btst                    #1,d3
                         beq                     .applyMoveY
                         ; -- else moving down
                         addq.b                  #1,d4
@@ -1104,13 +1104,13 @@ PhsGameUpdate:
                         ; -- Computation of dx, the player moves by 2 units
                         ; ========
                         ; -- j1.left == 0 ?
-.moveX                  btst.b                  #2,d3
+.moveX                  btst                    #2,d3
                         beq                     .moveRight
                         ; -- else moving left
                         subq.b                  #2,d6
                         ; ========
 .moveRight              ; -- j1.right == 0 ?
-                        btst.b                  #3,d3
+                        btst                    #3,d3
                         beq                     .applyMoveX
                         ; -- else moving right
                         addq.b                  #2,d6
@@ -1162,7 +1162,7 @@ PhsGameUpdate:
                         moveq                   #0,d2
                         move.w                  (a2),d2
                         ; -- test j1.fire
-                        btst.b                  #7,d2
+                        btst                    #7,d2
                         ; -- handle no fire
                         beq                     .doCaptvHandleNoFire
                         ; -- else handle fire
@@ -1186,7 +1186,7 @@ PhsGameUpdate:
                         ; -- skip if fire not pressed
                         bne                     .doneCaptvHandleSteer
                         ; -- else test j1.left
-                        btst.b                  #2,d2
+                        btst                    #2,d2
                         ; -- skip to handle right when joystick not to the left
                         beq                     .doCaptvHandleRight
                         ; -- else update ball target and direction
@@ -1195,7 +1195,7 @@ PhsGameUpdate:
                         bra                     .doneCaptvHandleSteer
 .doCaptvHandleRight
                         ; test j1.right
-                        btst.b                  #3,d2
+                        btst                    #3,d2
                         ; -- skip to handle right when joystick not to the left
                         beq                     .doneCaptvHandleSteer
                         ; -- else update ball target and direction
@@ -1787,7 +1787,7 @@ PhsGameRedraw:          ; ========
                         move.l                  #$ff000000,d4
                         bra                     .shiftMask
 .wideBrick
-                        btst.b                  #0,d6
+                        btst                    #0,d6
                         ; -- skip if d6 even
                         beq                     .maskForEvenWidth
                         ; d4 := unskewed mask for odd width

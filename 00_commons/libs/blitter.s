@@ -88,14 +88,14 @@ BlitRunList:
 .next
                         move.w                  (a5)+,d7
                         ; -- select(d7)
-                        dbf.s                   d7,.opcode1
+                        dbf                     d7,.opcode1
                         bra.s                   .eol
 .opcode1
-                        dbf.s                   d7,.opcode2
+                        dbf                     d7,.opcode2
                         bsr.w                   BlitRunItem_1
                         bra.s                   .next
 .opcode2
-                        dbf.s                   d7,.opcode3
+                        dbf                     d7,.opcode3
                         bsr.w                   BlitRunItem_2
                         bra.s                   .next
 .opcode3

@@ -101,7 +101,7 @@ PhsFadeToEndRedraw:
                         movem.l                 d0-d6/a0,-(a4)
                         movem.l                 d0-d6/a0,-(a4)
                         movem.l                 d0-d6/a0,-(a4)
-                        dbf.s                   d7,.nextLine
+                        dbf                     d7,.nextLine
 .thatsAll               rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; after each

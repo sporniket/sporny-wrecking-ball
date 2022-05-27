@@ -241,7 +241,7 @@ LvlParser_handleChar:
                         ; d5 - current size of the accumulated line data
                         ; d4 - char to process
                         ; --
-                        btst.b                  #7,d4
+                        btst                    #7,d4
                         ; -- accept character codes that are < 128 (inside basic latin range)
                         beq                     .isInRange
                         rts
