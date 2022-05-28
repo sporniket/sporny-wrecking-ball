@@ -33,8 +33,9 @@ if [[ ${CHECK_COMMAND} ]]; then
   exit 1
 fi
 touch "${FILE_FOLDERS_MK}"
-echo -n -e "\e[96mName of the project folder in the GEMDOS drive : \e[0m"
-read install_dir
+
+install_dir="swb"
+log_ok "\e[92m${install_dir}\e[0m will be the folder name in the GEMDOS emulated drive"
 
 [[ ! -d "${1}/build/${install_dir}" ]] && mkdir -p ${1}/build/${install_dir} && log_ok "Created install folder '${1}/build/${install_dir}'"
 
