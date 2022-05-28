@@ -39,6 +39,7 @@ read install_dir
 [[ ! -d "${1}/build/${install_dir}" ]] && mkdir -p ${1}/build/${install_dir} && log_ok "Created install folder '${1}/build/${install_dir}'"
 
 log_info "Creating ${FILE_FOLDERS_MK}..."
+BACKSLASH="\\\\\\"
 echo -e "
 INSTALLDIR = ${1}/build/${install_dir}
 INCLUDEDIR_COMMONS = ${1}/00_commons
@@ -46,9 +47,12 @@ INCLUDEDIR_COMMONS = ${1}/00_commons
 cat ${FILE_FOLDERS_MK}
 log_info "Creating ${FILE_ENV_LOCAL}..."
 echo -e "
+# linux pathes
 export GEMDOS_DRIVE=\"${1}/build\"
-export AUTORUN_FOLDER=\"${1}/build/${install_dir}\"
-export HATARI_FLAGS=\"--machine ste --fullscreen --tos-res med --harddrive '${1}/build/${install_dir}'\"
+export INSTALL_FOLDER=\"${1}/build/${install_dir}\"
+
+# variables for hatari
+export AUTORUN_PREFIX=\"C:${BACKSLASH}${install_dir^^}${BACKSLASH}\"
 " > "${FILE_ENV_LOCAL}"
 cat ${FILE_ENV_LOCAL}
 . ${FILE_ENV_LOCAL}

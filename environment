@@ -50,7 +50,7 @@ if [ -f "environment.local" ]; then
   echo "sourcing environment.local ..."
   source environment.local
   echo "Gemdos drive folder : ${GEMDOS_DRIVE}"
-  echo "Autorun folder : ${AUTORUN_FOLDER}"
+  echo "Install folder : ${INSTALL_FOLDER}"
 else
   echo "Use 'ap setup' to initialize environment.local !"
 fi

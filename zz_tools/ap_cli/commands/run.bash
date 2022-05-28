@@ -17,10 +17,13 @@ Launch hatari with the given program
 
 case "$1" in
   swb|sheetext)
-    log_info "Starting ${1}..."
+    AUTORUN="${AUTORUN_PREFIX}${1^^}.PRG"
+    log_info "Starting ${1} as ${AUTORUN}"
+    hatari --harddrive "${GEMDOS_DRIVE}" --auto "${AUTORUN}"
     ;;
   desktop)
     log_info "Starting Hatari to the desktop..."
+    hatari --harddrive "${GEMDOS_DRIVE}"
     ;;
   *)
     run_help
