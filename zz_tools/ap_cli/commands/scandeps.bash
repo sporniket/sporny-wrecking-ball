@@ -40,21 +40,26 @@ scan_dependencies_deeply() {
   echo
 }
 
+scan_project() {
+  ### scan a source program folder, expecting some optionnal subfolders to be there.
+  # $1 : path of the program folder.
+  log_info "Scanning ${1}..."
+  cd "${1}"
+  scan_dependencies "SRCS" "." "*.s" > "${FILE_TARGET}"
+  if [[ -d "./includes" ]]; then
+    scan_dependencies_deeply "INCLUDES" "./includes" "*.s" >> "${FILE_TARGET}"
+  fi
+  if [[ -d "./assets" ]]; then
+    scan_dependencies_deeply "ASSETS" "./assets" "*" >> "${FILE_TARGET}"
+  fi
+  cd ..
+}
+
 scandeps_help
 log_info "Scanning commons dependencies..."
 scan_dependencies_deeply "COMMONS_MACROS" "${DIR_COMMONS_MACROS}" "*.s" > "${FILE_TARGET}"
 scan_dependencies_deeply "COMMONS_LIBS" "${DIR_COMMONS_LIBS}" "*.s" >> "${FILE_TARGET}"
 
-log_info "Scanning ${DIR_APP_WRECKING_BALLS}..."
-cd "${DIR_APP_WRECKING_BALLS}"
-scan_dependencies "SRCS" "." "*.s" > "${FILE_TARGET}"
-scan_dependencies_deeply "INCLUDES" "./includes" "*.s" >> "${FILE_TARGET}"
-scan_dependencies_deeply "ASSETS" "./assets" "*" >> "${FILE_TARGET}"
-cd ..
-
-log_info "Scanning ${DIR_APP_SHEET_EXTRACTOR}..."
-cd "${DIR_APP_SHEET_EXTRACTOR}"
-scan_dependencies "SRCS" "." "*.s" > "${FILE_TARGET}"
-#scan_dependencies_deeply "INCLUDES" "./includes" "*.s" >> "${FILE_TARGET}"
-scan_dependencies_deeply "ASSETS" "./assets" "*" >> "${FILE_TARGET}"
-cd ..
+for prj in $(ls -d [1-4][0-9]_*); do
+  scan_project "${prj}"
+done
