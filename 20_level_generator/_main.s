@@ -200,7 +200,7 @@ TestLevelData           dc.b                    "Lorem ipsum dolor sit amet, con
                         even
 ; ================================================================================================================
 ; Source of the builtins levels
-SourceAsset:            incbin                  'levels/lvl_src.md'
+SourceAsset:            incbin                  'assets/lvl_src.md'
 SourceAssetTop:
                         even
 ;
