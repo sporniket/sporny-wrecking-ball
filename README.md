@@ -7,6 +7,7 @@ A little breakout style game for the Atari STE written in assembly 68k
 ## Required
 
 * A Linux installation, Ubuntu is recommanded (as "the author uses Ubuntu").
+  * bash shell, for the command line interface (CLI).
   * make, gcc,... to be able to build vasm
 * Hatari, an Atari ST/STE/TT/Falcon emulator.
   * Setup hatari to have a blitter and DMA sound. Recommanded is a STE, tos 1.62.
@@ -27,6 +28,12 @@ cd sporny-wrecking-ball
 * Invoke the CLI to create some makefiles snippets : `ap scandeps`
 * Invoke the CLI to build the program : `ap build swb`
 * Launch the CLI to launch the program : `ap run swb`
+
+> **About the CLI (Command Line Interface)** : Once you have sourced the `environment` file, you may invoke the
+> CLI using the alias `ap`. Without arguments, a brief help is displayed to list available commands. Commands
+> requiring arguments have a builtin brief help too.
+>
+> _The CLI is a collection of bash shell scripts_
 
 ## Build on real Atari
 
