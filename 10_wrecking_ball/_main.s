@@ -20,11 +20,11 @@
 ; ================================================================================================================
 ; Input macros
 MouseOff                macro
-                        _ikbdws                 1, ikbdMsOffJoyOn
+                        _xos_ikbdws                 1, ikbdMsOffJoyOn
                         endm
 
 MouseOn                 macro
-                        _ikbdws                 1, ikbdJoyOnMsOnRel
+                        _xos_ikbdws                 1, ikbdJoyOnMsOnRel
                         endm
 
 ; ================================================================================================================
@@ -92,7 +92,7 @@ CanStart:               ; --------
                         bsr                     CheckHardwareOrDie
 
                         ; ========
-                        _Getrez
+                        _xos_Getrez
                         lea                     BufferSysState,a0
                         move.w                  d0,(a0)+
                         ChangeToRez             #0
@@ -119,7 +119,7 @@ CanStart:               ; --------
                         move.w                  d6,(a6)+                ; ... and save
                         dbf                     d7,.nextAppColor
                         ; ========
-                        _Setpalette             appPalette
+                        _xos_Setpalette             appPalette
                         ; -- prepare to quit abruptly
                         SetupAbnormalTerm
                         ; -- Display greeting message
@@ -172,7 +172,7 @@ CheckHardwareOrDie:
 ; ================================================================================================================
 CheckStColor:
                         ;Getrez is 0 or 1
-                        _Getrez
+                        _xos_Getrez
                         ; d7 := output char from d0 = 0 + $30 (ascii code of '0')
                         moveq                   #0,d7
                         move.w                  d0,d7
@@ -194,7 +194,7 @@ CheckStColor:
 CheckTosVersion:
                         ; -- want at least 1.02
                         ; d0 := TOS version
-                        _Supexec                #DoRetrieveTosVersion
+                        _xos_Supexec                #DoRetrieveTosVersion
                         ; d7 := backup result
                         moveq                   #0,d7
                         move.w                  d0,d7
@@ -241,7 +241,7 @@ DoRetrieveTosVersion:
 ; Check Blitter
 ; ================================================================================================================
 CheckBlitter:
-                        _BlitMode               #-1
+                        _xos_BlitMode               #-1
                         ; d7 := backup result
                         moveq                   #0,d7
                         move.w                  d0,d7
@@ -262,9 +262,9 @@ CheckBlitter:
                         rts
 .switchOn
                         PrintChar               #','
-                        _BlitMode               #1
+                        _xos_BlitMode               #1
                         Print                   messBlitterActivated
-                        _BlitMode               #-1
+                        _xos_BlitMode               #-1
                         move.w                  d0,d7
                         move.b                  d7,d6
                         add.b                   #$30,d6
@@ -288,7 +288,7 @@ CheckBlitter:
 CheckDmaSound:
                         ; push low byte address of dma sound control register
                         move.l                  #$ffff8900,-(sp)
-                        _Supexec                #FnIsReadableAddress
+                        _xos_Supexec                #FnIsReadableAddress
                         ; fix stack
                         addq.l                  #4,sp
                         ; d7 := backup value
@@ -411,7 +411,7 @@ MmHeapBase              dc.l                    0                       ; save t
 MmHeapTop               dc.l                    0                       ; save the top of the heap here
 ; ================================================================================================================
 ; Buffers to save system value to be restored at the end.
-BufferSysState          dc.w                    0                       ;_Getrez, in case of going back to medium
+BufferSysState          dc.w                    0                       ;_xos_Getrez, in case of going back to medium
 BufferSysPalette        ds.w                    16                      ;Buffer for system palette
 BufferSysIkbdvbase      dc.l                    0                       ;System IKBD vector base
 BufferSysJoystckHandlr  dc.l                    0                       ;System IKBD joystick vector

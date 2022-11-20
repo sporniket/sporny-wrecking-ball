@@ -187,7 +187,7 @@ ExecSoundBallRebound:
 ;
 DoSoundBallRebound      macro
                         ; -- supexec the routine
-                        _Supexec                #ExecSoundBallRebound
+                        _xos_Supexec                #ExecSoundBallRebound
                         endm
 ;
 
@@ -274,7 +274,7 @@ ExecShowPlayer
                         DoBlitPlayerNext        a3,a2,a1
                         ; -- end of blit list
                         move.w                  #0,(a1)+
-                        _Supexec                #BlitRunList
+                        _xos_Supexec                #BlitRunList
                         rts
 ;
 
@@ -361,7 +361,7 @@ ExecShowBall
                         DoBlitBallNext          a3,a2,a1
                         ; -- end of blit list
                         move.w                  #0,(a1)+
-                        _Supexec                #BlitRunList
+                        _xos_Supexec                #BlitRunList
                         rts
 ;
 
@@ -428,7 +428,7 @@ ExecSound               macro
                         ; --
                         move.l                  #DmaSound_PtrDesc,\2
                         move.l                  \1,(\2)
-                        _Supexec                #DmaSound_playOnce
+                        _xos_Supexec                #DmaSound_playOnce
                         endm
 ;
 ; ----------------------------------------------------------------------------------------
@@ -579,7 +579,7 @@ PhsGameBeforeAll:       ; ========
                         move.l                  #SprDtNoBrickOdd,(a6)+
                         ;
                         ; -- setup microwire sound
-                        _Supexec                #SetupMicrowire
+                        _xos_Supexec                #SetupMicrowire
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; before each
@@ -1726,7 +1726,7 @@ PhsGameRedraw:          ; ========
                         lea                     -160(a2),a2
                         move.l                  a2,GameState_Level_ptrUnlckCell(a6)
                         ; -- Ready to blit
-                        _Supexec                #BlitRunList
+                        _xos_Supexec                #BlitRunList
 .startRedrawBricks      ; ======== ======== ======== ========
                         ; == Redraw (erase only) bricks
                         ; d7 := number of bricks to erase
@@ -1830,7 +1830,7 @@ PhsGameRedraw:          ; ========
                         dbf                     d7,.nextBrickToErase
                         ; -- terminate and execute blit list
                         move.w                  #0,(a1)+
-                        _Supexec                #BlitRunList
+                        _xos_Supexec                #BlitRunList
                         ; ========
                         ; ======== ======== ======== ========
                         ; -- do nothing if dx, dy are 0 (//NOT YET, what about the first redraw ?)

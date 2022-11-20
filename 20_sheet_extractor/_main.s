@@ -25,10 +25,10 @@ Terminate               macro
                         ; -- load palette
                         ; a5 := start of source asset
                         move.l                  #SourceAsset,a5
-                        _Setpalette             2(a5)
+                        _xos_Setpalette             2(a5)
                         ; -- copy picture to screen
                         ; d0 := logbase
-                        _Logbase
+                        _xos_Logbase
                         ; a6 := d0 + 32 to prepare movem
                         move.l                  d0,a6
                         lea                     32(a6),a6
@@ -114,7 +114,7 @@ Terminate               macro
 
                         ; -- visual check
                         ; d0 := logbase
-                        _Logbase
+                        _xos_Logbase
                         ; a6 := start of screen
                         move.l                  d0,a6
                         lea                     16000(a6),a6
@@ -152,7 +152,7 @@ Terminate               macro
                         endr
 
                         ; -- save data : bricks
-                        _fcreate                #DestAssetSpritesBricks,#0
+                        _dos_fcreate                #DestAssetSpritesBricks,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -160,10 +160,10 @@ Terminate               macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#2176,#DatAssetBricks
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#2176,#DatAssetBricks
+                        _dos_fclose                 d7
                         ; -- save data : balls
-                        _fcreate                #DestAssetSpritesBalls,#0
+                        _dos_fcreate                #DestAssetSpritesBalls,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi                     thatsAll
@@ -171,10 +171,10 @@ Terminate               macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#128,#DatAssetBall
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#128,#DatAssetBall
+                        _dos_fclose                 d7
                         ; -- save data : player
-                        _fcreate                #DestAssetSpritesPlayer,#0
+                        _dos_fcreate                #DestAssetSpritesPlayer,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.s                   thatsAll
@@ -182,10 +182,10 @@ Terminate               macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#256,#DatAssetPlayer
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#256,#DatAssetPlayer
+                        _dos_fclose                 d7
                         ; -- save data : line
-                        _fcreate                #DestAssetSpritesLine,#0
+                        _dos_fcreate                #DestAssetSpritesLine,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.s                   thatsAll
@@ -193,8 +193,8 @@ Terminate               macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#160,#DatBlackLine
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#160,#DatBlackLine
+                        _dos_fclose                 d7
 
 
 

@@ -22,11 +22,11 @@
 ; ================================================================================================================
 ; Input macros
 MouseOff                macro
-                        _ikbdws                 1, ikbdMsOffJoyOn
+                        _xos_ikbdws                 1, ikbdMsOffJoyOn
                         endm
 ;
 MouseOn                 macro
-                        _ikbdws                 1, ikbdJoyOnMsOnRel
+                        _xos_ikbdws                 1, ikbdJoyOnMsOnRel
                         endm
 ;
 Print                   macro
@@ -156,7 +156,7 @@ dumpDataInFile:         ; dumpDataInFile(data)
                         ; a4 := ptr to brick data
                         lea                     SIZEOF_LvlHandlr_TxtDat(a5),a4
                         ; -- save data : bricks
-                        _fcreate                a6,#0
+                        _dos_fcreate                a6,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -164,9 +164,9 @@ dumpDataInFile:         ; dumpDataInFile(data)
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#SIZEOF_LvlHandlr_BrkDat,a4
-                        _fwrite                 d7,#SIZEOF_LvlHandlr_TxtDat,a5
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#SIZEOF_LvlHandlr_BrkDat,a4
+                        _dos_fwrite                 d7,#SIZEOF_LvlHandlr_TxtDat,a5
+                        _dos_fclose                 d7
                         ; -- print success
                         Print                   messDidSave
                         Print                   messLvlFileName

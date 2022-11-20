@@ -21,11 +21,11 @@
 ; ================================================================================================================
 ; Input macros
 MouseOff                macro
-                        _ikbdws                 1, ikbdMsOffJoyOn
+                        _xos_ikbdws                 1, ikbdMsOffJoyOn
                         endm
 ;
 MouseOn                 macro
-                        _ikbdws                 1, ikbdJoyOnMsOnRel
+                        _xos_ikbdws                 1, ikbdJoyOnMsOnRel
                         endm
 ;
 Print                   macro
@@ -44,7 +44,7 @@ Terminate               macro
                         SaveSysPalette          BufferSysPalette
                         ; a5 := start of source asset
                         move.l                  #SourceAsset,a5
-                        _Setpalette             2(a5)
+                        _xos_Setpalette             2(a5)
                         ; -- output font set template
                         Print                   messCls
                         rept 4
@@ -55,7 +55,7 @@ Terminate               macro
                         ; -- that's all
                         ; -- copy screen to picture
                         ; d0 := logbase
-                        _Logbase
+                        _xos_Logbase
                         ; a6 := d0 = movem source
                         move.l                  d0,a6
                         ; a5 := start of source asset + 34 + 32 = movem destination
@@ -70,7 +70,7 @@ Terminate               macro
 
                         ; -- visual check
                         ; d0 := logbase
-                        _Logbase
+                        _xos_Logbase
                         ; a6 := start of screen
                         move.l                  d0,a6
                         lea                     20480(a6),a6
@@ -84,7 +84,7 @@ Terminate               macro
                         endr
 
                         ; -- save data : bricks
-                        _fcreate                #DestFontAsset,#0
+                        _dos_fcreate                #DestFontAsset,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -92,8 +92,8 @@ Terminate               macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#32066,#SourceAsset
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#32066,#SourceAsset
+                        _dos_fclose                 d7
 
 thatsAll                WaitInp
                         RestoreSavedPalette     BufferSysPalette

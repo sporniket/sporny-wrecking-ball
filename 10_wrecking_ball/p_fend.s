@@ -36,7 +36,7 @@ PhsFadeToEndBeforeEach:
                         move.w                  d7,Fend_Count
                         ; -- init Fend_PtrStartToRedraw
                         ; d0 := pointer to the start of memory screen
-                        _Logbase
+                        _xos_Logbase
                         move.l                  d0,Fend_PtrStartToRedraw
                         ; -- init Fend_PtrEndToRedraw
                         ; d0 := pointer to end of memory screen

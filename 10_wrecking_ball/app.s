@@ -88,22 +88,22 @@ PhaseRun:               ; ========
                         bne.s                   Finish
                         ; ========
                         ;Print                   dbgDing
-                        ;_Setcolor #0,#$019
+                        ;_xos_Setcolor #0,#$019
                         move.l                  PtrCurrentUpdate,a2
                         jsr                     (a2)
-                        ;_Setcolor #0,#$210
+                        ;_xos_Setcolor #0,#$210
                         ; ========
                         ; prepare redraw
-                        _Logbase
+                        _xos_Logbase
                         move.l                  d0,a5
                         ; ========
                         ; wait vbl
-                        _Vsync
-                        ;_Setcolor #0,#$219
+                        _xos_Vsync
+                        ;_xos_Setcolor #0,#$219
                         ; ========
                         move.l                  PtrCurrentRedraw,a2
                         jsr                     (a2)
-                        ;_Setcolor #0,#$200
+                        ;_xos_Setcolor #0,#$200
                         ; ========
                         ; apply next Phase
                         move.l                  PtrNextUpdate,PtrCurrentUpdate

@@ -82,7 +82,7 @@ VisualCheck             macro
                         ; 4 - spare address register
                         ; --
                         ; \3 := screen start
-                        _Logbase
+                        _xos_Logbase
                         move.l                  \1,\3
                         ; \4 := cursor font data
                         move.l                  \2,\4
@@ -96,10 +96,10 @@ VisualCheck             macro
                         ; -- load palette
                         ; a5 := start of source asset
                         move.l                  #SourceAsset,a5
-                        _Setpalette             2(a5)
+                        _xos_Setpalette             2(a5)
                         ; -- copy picture to screen
                         ; d0 := logbase
-                        _Logbase
+                        _xos_Logbase
                         ; a6 := d0 + 32 to prepare movem
                         move.l                  d0,a6
                         lea                     32(a6),a6
@@ -128,11 +128,11 @@ VisualCheck             macro
                         ExtractFontData         a6,a5,a4,a3,a2,a1
                         ; -- visual check
                         ; a4 := screen start
-                        _Logbase
+                        _xos_Logbase
                         VisualCheck             d0,a5,a4,a3
 
                         ; -- save data : bricks
-                        _fcreate                #DestAssetFont0,#0
+                        _dos_fcreate                #DestAssetFont0,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -140,8 +140,8 @@ VisualCheck             macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#3072,#DatAssetFont
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#3072,#DatAssetFont
+                        _dos_fclose                 d7
                         WaitInp
 
                         ; -- extract the next font
@@ -151,11 +151,11 @@ VisualCheck             macro
                         ExtractFontData         a6,a5,a4,a3,a2,a1
                         ; -- visual check
                         ; a4 := screen start
-                        _Logbase
+                        _xos_Logbase
                         VisualCheck             d0,a5,a4,a3
 
                         ; -- save data : bricks
-                        _fcreate                #DestAssetFont1,#0
+                        _dos_fcreate                #DestAssetFont1,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -163,8 +163,8 @@ VisualCheck             macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#3072,#DatAssetFont
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#3072,#DatAssetFont
+                        _dos_fclose                 d7
                         WaitInp
 
                         ; -- extract the next font
@@ -174,11 +174,11 @@ VisualCheck             macro
                         ExtractFontData         a6,a5,a4,a3,a2,a1
                         ; -- visual check
                         ; a4 := screen start
-                        _Logbase
+                        _xos_Logbase
                         VisualCheck             d0,a5,a4,a3
 
                         ; -- save data : bricks
-                        _fcreate                #DestAssetFont2,#0
+                        _dos_fcreate                #DestAssetFont2,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -186,8 +186,8 @@ VisualCheck             macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#3072,#DatAssetFont
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#3072,#DatAssetFont
+                        _dos_fclose                 d7
                         WaitInp
 
                         ; -- extract the next font
@@ -197,11 +197,11 @@ VisualCheck             macro
                         ExtractFontData         a6,a5,a4,a3,a2,a1
                         ; -- visual check
                         ; a4 := screen start
-                        _Logbase
+                        _xos_Logbase
                         VisualCheck             d0,a5,a4,a3
 
                         ; -- save data : bricks
-                        _fcreate                #DestAssetFont3,#0
+                        _dos_fcreate                #DestAssetFont3,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -209,8 +209,8 @@ VisualCheck             macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#3072,#DatAssetFont
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#3072,#DatAssetFont
+                        _dos_fclose                 d7
                         WaitInp
 
                         ; -- extract the next font
@@ -220,11 +220,11 @@ VisualCheck             macro
                         ExtractFontData         a6,a5,a4,a3,a2,a1
                         ; -- visual check
                         ; a4 := screen start
-                        _Logbase
+                        _xos_Logbase
                         VisualCheck             d0,a5,a4,a3
 
                         ; -- save data : bricks
-                        _fcreate                #DestAssetFontMask,#0
+                        _dos_fcreate                #DestAssetFontMask,#0
                         tst.l                   d0
                         ; -- if (d0 < 0) error
                         bmi.w                   thatsAll
@@ -232,8 +232,8 @@ VisualCheck             macro
                         ; d7 := d0 (file handler)
                         moveq                   #0,d7
                         move.w                  d0,d7
-                        _fwrite                 d7,#3072,#DatAssetFont
-                        _fclose                 d7
+                        _dos_fwrite                 d7,#3072,#DatAssetFont
+                        _dos_fclose                 d7
 
 
 thatsAll                WaitInp

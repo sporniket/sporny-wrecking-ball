@@ -31,7 +31,7 @@ Terminate               macro
                         ___gemdos               0,0
                         endm
 ;
-_BlitMode               macro
+_xos_BlitMode               macro
                         move.w                  \1,-(sp)
                         ___xbios                64,4
                         endm
@@ -58,7 +58,7 @@ ThatsAll:
 ; ================================================================================================================
 CheckStColor:
                         ;Getrez is 0 or 1
-                        _Getrez
+                        _xos_Getrez
                         ; d7 := output char from d0 = 0 + $30 (ascii code of '0')
                         moveq                   #0,d7
                         move.w                  d0,d7
@@ -78,7 +78,7 @@ CheckStColor:
 CheckTosVersion:
                         ; -- want at least 1.02
                         ; d0 := TOS version
-                        _Supexec                #DoRetrieveTosVersion
+                        _xos_Supexec                #DoRetrieveTosVersion
                         ; d7 := backup result
                         moveq                   #0,d7
                         move.w                  d0,d7
@@ -125,7 +125,7 @@ DoRetrieveTosVersion:
 ; Check Blitter
 ; ================================================================================================================
 CheckBlitter:
-                        _BlitMode               #-1
+                        _xos_BlitMode               #-1
                         ; d7 := backup result
                         moveq                   #0,d7
                         move.w                  d0,d7
@@ -146,9 +146,9 @@ CheckBlitter:
                         rts
 .switchOn
                         PrintChar               #','
-                        _BlitMode               #1
+                        _xos_BlitMode               #1
                         Print                   messBlitterActivated
-                        _BlitMode               #-1
+                        _xos_BlitMode               #-1
                         move.w                  d0,d7
                         move.b                  d7,d6
                         add.b                   #$30,d6
@@ -172,7 +172,7 @@ CheckBlitter:
 CheckDmaSound:
                         ; push low byte address of dma sound control register
                         move.l                  #$ffff8900,-(sp)
-                        _Supexec                #FnIsReadableAddress
+                        _xos_Supexec                #FnIsReadableAddress
                         ; fix stack
                         addq.l                  #4,sp
                         ; d7 := backup value

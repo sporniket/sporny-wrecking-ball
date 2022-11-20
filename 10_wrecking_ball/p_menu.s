@@ -93,7 +93,7 @@ ExecBlitPartialScreen
                         DoBlitPartialScreen     a4,a3,d6,a1,d5
                         ; -- end of blit list
                         move.w                  #0,(a1)+
-                        _Supexec                #BlitRunList
+                        _xos_Supexec                #BlitRunList
                         rts
 ; ----------------------------------------------------------------------------------------------------------------
 ; before all
@@ -128,7 +128,7 @@ PhsMenuBeforeEach:
                         move.w                  d6,Menu_PhaseNext(a6)
                         ; -- init Menu_PtrStartToRedraw
                         ; d0 := pointer to the start of memory screen
-                        _Logbase
+                        _xos_Logbase
                         ; d1 := pointer to the start of the redraw = d0 - 1 lines offset = d0 - 160
                         move.l                  d0,d1
                         sub.l                   #160,d1

@@ -9,7 +9,7 @@ BodyOfApp:              ; Entry point of the application
                         ; Your code start here...
                         ; ----------------------------------------------------------------
                         lea                     screenBase,a6
-                        _Logbase
+                        _xos_Logbase
                         move.l                  d0,(a6)
 doDrawMask
                         move.l                  (a6),a0
@@ -54,7 +54,7 @@ doDrawSwatches
                         ;
                         ; Wait vbl
                         ;
-                        _Vsync
+                        _xos_Vsync
 
 doPollJoysticks
 .loop                   lea                     BufferJoystate,a0

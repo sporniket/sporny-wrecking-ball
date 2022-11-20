@@ -73,7 +73,7 @@ BlitRunItem_3:
 ;
 ; -- Get the list and execute the operations --
 ; Put the pointer to the start of the list into PtrBlitterList,
-; then call `_Supexec #BlitRunList`
+; then call `_xos_Supexec #BlitRunList`
 
 BlitRunList:
                         ; -- save registers

@@ -152,7 +152,7 @@ InitLevel_execFadeClr
                         InitLevel_BlitFadeClr   a6,a5
                         ; -- end of blit list
                         move.w                  #0,(a5)+
-                        _Supexec                #BlitRunList
+                        _xos_Supexec                #BlitRunList
                         rts
 ;
 ;
@@ -197,7 +197,7 @@ PhsInitLevelBeforeEach:
                         ; (init all but the screen address)
                         FadeClr_init            a6,SpritesLinesDat,2,-160,0,0,0,2,-1600,1280,-160
                         ; retrieve the start address of the screen
-                        _Logbase
+                        _xos_Logbase
                         move.l                  d0,FadeClr_Dest(a6)
                         move.l                  d0,FadeClr_PtrDest(a6)
                         ; -- Find out current level data
@@ -310,7 +310,7 @@ PhsInitLevelUpdate:
                         mulu.w                  #40,d5
                         add.l                   d5,a5
                         ; a4 := Start of screen
-                        _Logbase
+                        _xos_Logbase
                         move.l                  d0,a4
                         ; d5 := displacement to current screen line (previously 80*level line) = d5 * 16
                         lsl.l                   #4,d5
@@ -362,7 +362,7 @@ PhsInitLevelUpdate:
                         add.l                   d5,a5
                         addq.l                  #2,a5
                         ; a4 := Start of screen
-                        _Logbase
+                        _xos_Logbase
                         move.l                  d0,a4
                         ; d5 := displacement to current screen line (previously 80*level line) = d5 * 16
                         lsl.l                   #4,d5
@@ -442,7 +442,7 @@ PhsInitLevelRedraw:
 .caseStepLevel
                         dbf                     d7,.caseStepWait
                         ; -- case InitLevel_STEP_LEVEL
-                        _Supexec                #BlitRunList
+                        _xos_Supexec                #BlitRunList
                         ; d6 := line counter
                         moveq                   #0,d6
                         move.w                  InitLevel_LvlLine,d6
