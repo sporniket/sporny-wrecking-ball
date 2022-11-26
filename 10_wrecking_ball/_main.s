@@ -18,6 +18,22 @@
                         include                 'macros/blitter.s'
 
 ; ================================================================================================================
+; Definition of the map of the Heap
+; ----------------------------------------------------------------------------------------------------------------
+                        include                 '0_heapmp.s'
+; ----------------------------------------------------------------------------------------------------------------
+; Setup an address register with the start of a given area of the Heap
+; ---
+; The start of the heap is stored at (MmHeapBase)
+; ----------------------------------------------------------------------------------------------------------------
+SetupHeapAddress        macro
+                        ; 1 - offset inside the Heap
+                        ; 2 - address register to set
+                        ; --
+                        DerefPtrToPtr           MmHeapBase,\2
+                        lea                     \1(\2),\2
+                        endm
+; ================================================================================================================
 ; Input macros
 MouseOff                macro
                         _xos_ikbdws                 1, ikbdMsOffJoyOn

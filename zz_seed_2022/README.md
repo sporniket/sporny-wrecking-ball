@@ -17,6 +17,7 @@ The folder contains :
 
 * **TO BE DONE**
 * `_main.s` : the source file that will tie the whole thing. Normally, one will NOT need to change anything there.
+* `0_heapmp.s` : the structure of the heap, that will define the required size.
 * `app.s` : you start to write your new program there. Some parts MUST be kept so that `_main.s` can work out things.
 * `Makefile` : the makefile to build the binary. Some parts MUST be kept so that it works. It is expected that a `dependencies.local.mk` will be generated do list the involved files as _sources_, _includes_ and _assets_. 
 * `assets` : a folder to put all the data to embed into the binary or to accompany the binary.
@@ -28,7 +29,7 @@ The folder contains :
 
 Not including the writing of the actual program, there are some edits that are needed to adapt the seed :
 
-* Memory management (heap and stack) ; _heap size with heap map in `app.s`, FIXME move into a separate file_ ; _stack size to be defined as a define in the makefile or a separate makefile include, and used inside `_main.s`_
+* Memory management (heap and stack) ; _define the structure of the heap in `0_heapmp.s`_ ; _stack size to be defined as a define in the makefile or a separate makefile include, and used inside `_main.s`_
 * Select Hardware checks and requirements ; _FIXME defines in the makefile, or makefile include_ ; _FIXME add conditionnals in `_main.s` to enable/disable the call to the target hardware check_
 * ...
 

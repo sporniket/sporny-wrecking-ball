@@ -12,37 +12,6 @@
 ; ================================================================================================================
 ; Constant macros
 ; ================================================================================================================
-; -- 'Heap POSition' aka memory map of the heap
-; //FIXME use rs.x
-                        rsreset
-; Grid : 1200 words = 2400 bytes
-HposGridBase            rs.w                    1200
-HposGridTop             rs.w                    0
-; Freedom bitmap : 500 bytes
-HposFreedomBase         rs.b                    500
-HposFreedomTop          rs.b                    0
-; Blitter list : 2*(70 bytes (= 1 blit item 2 + 3 blit items 3) + 912 bytes (= 19 x 4 blit item 3)) + 2 bytes (terminator)
-HposBlitListBase        rs.b                    4000;1966
-HposBlitListTop         rs.b                    0
-; Game state
-HposGameStateBase       rs.b                    SIZEOF_GameState
-HposGameStateTop        rs.b                    0
-; Level currently being played
-HposCurrentLvlBase      rs.b                    SIZEOF_Level
-HposCurrentLvlTop       rs.b                    0
-; Transition
-HposFadeEffectBase      rs.b                    SIZEOF_FadeClr
-HposFadeEffectTop       rs.b                    0
-HposEnd                 rs.b                    0
-SIZEOF_HEAP_ACTUAL      rs.b                    0
-
-SetupHeapAddress        macro
-                        ; 1 - offset
-                        ; 2 - address register to set
-                        ; --
-                        DerefPtrToPtr           MmHeapBase,\2
-                        lea                     \1(\2),\2
-                        endm
 
 ; Data of Sprite sets
 ; //FIXME use rs
