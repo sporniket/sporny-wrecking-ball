@@ -20,12 +20,12 @@
 ;
 ; ================================================================================================================
 ; Input macros
-MouseOff                macro
-                        _xos_ikbdws                 1, ikbdMsOffJoyOn
+IkbdSetup                macro
+                        _xos_ikbdws                 1, ikbdSetupSequence
                         endm
 ;
-MouseOn                 macro
-                        _xos_ikbdws                 1, ikbdJoyOnMsOnRel
+IkbdRestore                 macro
+                        _xos_ikbdws                 1, ikbdRestoreSequence
                         endm
 ;
 Print                   macro
@@ -39,7 +39,7 @@ Terminate               macro
 
 ; ================================================================================================================
                         ; -- load palette
-                        MouseOff
+                        IkbdSetup
                         ; -- setup palette
                         SaveSysPalette          BufferSysPalette
                         ; a5 := start of source asset
@@ -97,7 +97,7 @@ Terminate               macro
 
 thatsAll                WaitInp
                         RestoreSavedPalette     BufferSysPalette
-                        MouseOn
+                        IkbdRestore
                         Terminate
 
 
@@ -126,8 +126,8 @@ messNewLine:            dc.b                    10,13,0
 ; ================================================================================================================
 ; Ikbd instructions for ikbdws, see the Atari compendium
 ikbdMsOffJoyOff:        dc.b                    $12, $1a                ; byte count = 2 - 1 = 1
-ikbdMsOffJoyOn:         dc.b                    $12, $14                ; byte count = 2 - 1 = 1
-ikbdJoyOnMsOnRel:       dc.b                    $14, $08                ; byte count = 2 - 1 = 1
+ikbdSetupSequence:         dc.b                    $12, $14                ; byte count = 2 - 1 = 1
+ikbdRestoreSequence:       dc.b                    $14, $08                ; byte count = 2 - 1 = 1
                         even
 
 DestAssetSprites:       dc.b                    "sprt.dat",0

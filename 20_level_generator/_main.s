@@ -21,12 +21,12 @@
 ;
 ; ================================================================================================================
 ; Input macros
-MouseOff                macro
-                        _xos_ikbdws                 1, ikbdMsOffJoyOn
+IkbdSetup                macro
+                        _xos_ikbdws                 1, ikbdSetupSequence
                         endm
 ;
-MouseOn                 macro
-                        _xos_ikbdws                 1, ikbdJoyOnMsOnRel
+IkbdRestore                 macro
+                        _xos_ikbdws                 1, ikbdRestoreSequence
                         endm
 ;
 Print                   macro
@@ -89,7 +89,7 @@ SIZEOF_LvlHandlr_TxtDat = 160 ; size of textual data.
 SIZEOF_LvlHandlr_BrkDat = 400 ; size of brick data.
 ; ================================================================================================================
                         ; -- Init
-                        MouseOff
+                        IkbdSetup
                         SetupAbnormalTerm
                         Print                   messCls
                         ; -- prepare to call parser
@@ -115,7 +115,7 @@ SIZEOF_LvlHandlr_BrkDat = 400 ; size of brick data.
 
 thatsAll                Print                   messThatsAll
                         WaitInp
-                        MouseOn
+                        IkbdRestore
                         Terminate
 
 ;
@@ -123,7 +123,7 @@ thatsAll                Print                   messThatsAll
 ; ================================================================================================================
 ; Termination on error handler.
 HastilyTerminateHandler:
-                        MouseOn
+                        IkbdRestore
                         rts
 
 ;
@@ -218,8 +218,8 @@ messThatsAll:           dc.b                    "Done. Press any key.",0
 ; ================================================================================================================
 ; Ikbd instructions for ikbdws, see the Atari compendium
 ikbdMsOffJoyOff:        dc.b                    $12, $1a                ; byte count = 2 - 1 = 1
-ikbdMsOffJoyOn:         dc.b                    $12, $14                ; byte count = 2 - 1 = 1
-ikbdJoyOnMsOnRel:       dc.b                    $14, $08                ; byte count = 2 - 1 = 1
+ikbdSetupSequence:         dc.b                    $12, $14                ; byte count = 2 - 1 = 1
+ikbdRestoreSequence:       dc.b                    $14, $08                ; byte count = 2 - 1 = 1
                         even
 
 DestAssetSprites:       dc.b                    "sprt.dat",0

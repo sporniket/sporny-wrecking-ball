@@ -34,13 +34,24 @@ SetupHeapAddress        macro
                         lea                     \1(\2),\2
                         endm
 ; ================================================================================================================
-; Input macros
-MouseOff                macro
-                        _xos_ikbdws                 1, ikbdMsOffJoyOn
+; IKBD setup and restore
+; FIXME : separate include (macros and sequences)
+; ----------------------------------------------------------------------------------------------------------------
+; Setup the ikbd to notify only event of interest (most likely disable the mouse).
+; ---
+; FIXME : rewrite the macro so that the sequence would be encoded as : (length or length - 1) + (sequence)
+; ----------------------------------------------------------------------------------------------------------------
+IkbdSetup                macro
+                        _xos_ikbdws                 1, ikbdSetupSequence
                         endm
 
-MouseOn                 macro
-                        _xos_ikbdws                 1, ikbdJoyOnMsOnRel
+; ----------------------------------------------------------------------------------------------------------------
+; Restore the ikbd settings (most likely enable the mouse).
+; ---
+; FIXME : rewrite the macro so that the sequence would be encoded as : (length or length - 1) + (sequence)
+; ----------------------------------------------------------------------------------------------------------------
+IkbdRestore                 macro
+                        _xos_ikbdws                 1, ikbdRestoreSequence
                         endm
 
 ; ================================================================================================================
@@ -59,7 +70,7 @@ PrintChar               macro
 ;
 ;
 Terminate               macro
-                        MouseOn
+                        IkbdRestore
                         ___gemdos               0,0
                         endm
 ;
@@ -103,7 +114,7 @@ CanStart:               ; --------
                         ;
                         ; TPA management DONE
                         ; ========
-                        MouseOff
+                        IkbdSetup
                         Print                   vt52ClearScreen
                         bsr                     CheckHardwareOrDie
 
@@ -157,7 +168,7 @@ EndOfApp:
                         move.w                  (a6)+,d7
                         ChangeToRez             d7
                         ; ========
-                        MouseOn
+                        IkbdRestore
                         Terminate
 ;
 ; ================================================================================================================
@@ -378,7 +389,7 @@ HastilyTerminateHandler:
                         move.w                  (a6)+,d7
                         ChangeToRez             d7
                         ; ========
-                        MouseOn
+                        IkbdRestore
                         ;
                         rts
 
@@ -443,8 +454,8 @@ appPalette              dc.w                    $0423,$0112,$0c44,$0ded,$0336,$0
                         dc.w                    $0776,$057c,$0c73,$0899,$06a3,$0ca9,$06bc,$0dc6
 ; Ikbd instructions for ikbdws, see the Atari compendium
 ikbdMsOffJoyOff         dc.b                    $12, $1a                ; byte count = 2 - 1 = 1
-ikbdMsOffJoyOn          dc.b                    $12, $14                ; byte count = 2 - 1 = 1
-ikbdJoyOnMsOnRel        dc.b                    $14, $08                ; byte count = 2 - 1 = 1
+ikbdSetupSequence          dc.b                    $12, $14                ; byte count = 2 - 1 = 1
+ikbdRestoreSequence        dc.b                    $14, $08                ; byte count = 2 - 1 = 1
                         even
 ; VT-52 sequences (C-Strings)
 vt52ClearScreen         dc.b                    27,"E",0
