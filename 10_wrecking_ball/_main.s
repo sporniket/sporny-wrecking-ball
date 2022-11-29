@@ -394,8 +394,12 @@ HastilyTerminateHandler:
                         rts
 
 ; ================================================================================================================
-; Custom handlers
+; Custom ikbd handlers
 ; ================================================================================================================
+; Joystick events
+; ---
+; Just update the two joystick immediate state. 
+; ----------------------------------------------------------------------------------------------------------------
 OnJoystickSysEvent      movem                   a1,-(sp)
                         lea                     BufferJoystate,a1
                         addq.l                  #1,a0                   ;skip event source
@@ -403,7 +407,44 @@ OnJoystickSysEvent      movem                   a1,-(sp)
                         move.b                  (a0)+,(a1)+             ;j1 state
                         movem                   (sp)+,a1
                         rts
+; ---
+; Immediate state of all the joysticks. (At the moment, only the standard two) 
+; ----------------------------------------------------------------------------------------------------------------
 BufferJoystate          dc.w                    0
+; ================================================================================================================
+; Mouse events
+; ---
+; Update the mouse move and button states. Requires the mouse in relative mode.
+; ----------------------------------------------------------------------------------------------------------------
+OnMouseSysEvent         movem                   a1,-(sp)
+                        lea                     BufferMouseState,a1
+                        nop ; TODO the actual handler
+                        movem                   (sp)+,a1
+                        rts
+; ---
+; Mouse state (TODO a structure definition) 
+; ---
+; * signed WORD : x move ; to be cleared after use
+; * signed WORD : y move ; to be cleared after use
+; * unsigned WORD : button states (bit 0 : left ; bit 1 : right)
+; ----------------------------------------------------------------------------------------------------------------
+BufferMouseState        dc.w                    0,0,0
+; ================================================================================================================
+; Keyboard events
+; ---
+; Maintain the keys immediate states.
+; ----------------------------------------------------------------------------------------------------------------
+OnKeyboardSysEvent      movem                   a1,-(sp)
+                        lea                     BufferKeyboardState,a1
+                        nop ; TODO the actual handler
+                        movem                   (sp)+,a1
+                        rts
+; ---
+; Keyboard state (TODO a structure definition) 
+; ---
+; An array of 128 bytes, one byte per key (1 : pressed, 0 : released).
+; ----------------------------------------------------------------------------------------------------------------
+BufferKeyboardState     ds.w                    64 ; to enforce even size
 ; ================================================================================================================
 ; Libs
 ; ================================================================================================================
