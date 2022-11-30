@@ -418,15 +418,20 @@ BufferJoystate          dc.w                    0
 ; ----------------------------------------------------------------------------------------------------------------
 OnMouseSysEvent         movem                   a1,-(sp)
                         lea                     BufferMouseState,a1
-                        nop ; TODO the actual handler
+                        addq.l                  #1,a1                   ;skip high byte
+                        move.b                  (a0)+,(a1)+             ;button states
+                        addq.l                  #1,a1                   ;skip high byte
+                        move.b                  (a0)+,(a1)+             ;x move
+                        addq.l                  #1,a1                   ;skip high byte
+                        move.b                  (a0)+,(a1)+             ;y move
                         movem                   (sp)+,a1
                         rts
 ; ---
 ; Mouse state (TODO a structure definition) 
 ; ---
+; * unsigned WORD : button states (bit 0 : left ; bit 1 : right)
 ; * signed WORD : x move ; to be cleared after use
 ; * signed WORD : y move ; to be cleared after use
-; * unsigned WORD : button states (bit 0 : left ; bit 1 : right)
 ; ----------------------------------------------------------------------------------------------------------------
 BufferMouseState        dc.w                    0,0,0
 ; ================================================================================================================
@@ -434,10 +439,15 @@ BufferMouseState        dc.w                    0,0,0
 ; ---
 ; Maintain the keys immediate states.
 ; ----------------------------------------------------------------------------------------------------------------
-OnKeyboardSysEvent      movem                   a1,-(sp)
+OnKeyboardSysEvent      movem                   a1/d0/d1,-(sp)
                         lea                     BufferKeyboardState,a1
-                        nop ; TODO the actual handler
-                        movem                   (sp)+,a1
+                        moveq                   #0,d0
+                        move.b                  (a0),d0                 ; raw report
+                        move.b                  d0,d1                   ; clone
+                        and.b                   #$80,d1                 ; d1 = key state
+                        and.b                   #$7F,d0                 ; d0 = key index
+                        move.b                  (d0,a1),d1              ; update state of key
+                        movem                   (sp)+,a1/d0/d1
                         rts
 ; ---
 ; Keyboard state (TODO a structure definition) 
