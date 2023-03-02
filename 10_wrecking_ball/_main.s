@@ -493,6 +493,8 @@ BufferSysState          dc.w                    0                       ;_xos_Ge
 BufferSysPalette        ds.w                    16                      ;Buffer for system palette
 BufferSysIkbdvbase      dc.l                    0                       ;System IKBD vector base
 BufferSysJoystckHandlr  dc.l                    0                       ;System IKBD joystick vector
+BufferSysMouseHandlr    dc.l                    0                       ;System IKBD mouse vector
+BufferSysKeybrdHandlr   dc.l                    0                       ;System IKBD keyboard vector
 ; Screen adresses
 screenBase              dc.l                    0
 ; Human readable palette for the app. It will be converted into STe color palette on startup.
