@@ -125,10 +125,10 @@ CanStart:               ; --------
                         ChangeToRez             #0
                         ; ========
                         ; -- setup joystick handling
-                        SaveSysIkbdHandler      BufferSysIkbdvbase,BufferSysJoystckHandlr,a0
-.waitIkbd               tst.b                   36(a0)                  ; wait for KBDVECS.ikbdstate to be 0
-                        bne.s                   .waitIkbd
-                        move.l                  #OnJoystickSysEvent,24(a0)
+                        ; a0 := pointer to kbdvbase
+                        SaveSysIkbdHandler      BufferSysIkbdvbase,BufferSysJoystckHandlr,a0,KBDVBASE_joyvec
+                        WaitForIdleIkbdHandlers a0
+                        move.l                  #OnJoystickSysEvent,KBDVBASE_joyvec(a0)
                         ; ========
                         ; -- setup palette
                         SaveSysPalette          BufferSysPalette
@@ -161,7 +161,7 @@ EndOfApp:
                         Print                   messTheEnd
                         WaitInp
                         Print                   vt52ClearScreen
-                        RestoreSysIkbdHandler   BufferSysIkbdvbase,BufferSysJoystckHandlr,a0
+                        RestoreSysIkbdHandler   BufferSysIkbdvbase,BufferSysJoystckHandlr,a0,KBDVBASE_joyvec
                         RestoreSavedPalette     BufferSysPalette
                         ; ========
                         lea                     BufferSysState,a6
