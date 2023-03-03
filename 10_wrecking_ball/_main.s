@@ -446,7 +446,8 @@ OnKeyboardSysEvent      movem                   a1/d0/d1,-(sp)
                         move.b                  d0,d1                   ; clone
                         and.b                   #$80,d1                 ; d1 = key state
                         and.b                   #$7F,d0                 ; d0 = key index
-                        move.b                  (d0,a1),d1              ; update state of key
+                        add.l                   d0,a1                   ; move.b (d0,a1) requires 68020 or 68030+ ?
+                        move.b                  (a1),d1                 ; update state of key
                         movem                   (sp)+,a1/d0/d1
                         rts
 ; ---
