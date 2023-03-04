@@ -124,13 +124,20 @@ CanStart:               ; --------
                         move.w                  d0,(a0)+
                         ChangeToRez             #0
                         ; ========
-                        ; -- setup joystick handling
+                        ; IKBD handlers : backup and setup
                         ; a0 := pointer to kbdvbase
                         KBDVBASE_fetchInto      a0
+                        ; -- save kbdvbase to avoid performing the system call again
                         KBDVBASE_copy           a0,BufferSysIkbdvbase 
+                        ; -- save the handlers that we will replace
                         KBDVBASE_backupHandler  a0,KBDVBASE_joyvec,BufferSysJoystckHandlr
+                        KBDVBASE_backupHandler  a0,KBDVBASE_mousevec,BufferSysMouseHandlr
+                        KBDVBASE_backupHandler  a0,KBDVBASE_kbdsys,BufferSysKeybrdHandlr
+                        ; -- setup custom handlers
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_joyvec,#OnJoystickSysEvent
+                        KBDVBASE_waitWhileBusy  a0
+                        KBDVBASE_setHandler     a0,KBDVBASE_mousevec,#OnMouseSysEvent
                         ; ========
                         ; -- setup palette
                         SaveSysPalette          BufferSysPalette
@@ -167,6 +174,8 @@ EndOfApp:
                         ; Restore ikbd handlers
                         ; a0 := pointer to kbdvbase
                         KBDVBASE_copy           BufferSysIkbdvbase,a0
+                        KBDVBASE_waitWhileBusy  a0
+                        KBDVBASE_setHandler     a0,KBDVBASE_mousevec,BufferSysMouseHandlr
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_joyvec,BufferSysJoystckHandlr
                         ; ========
@@ -392,6 +401,8 @@ BuggyReturn:
 HastilyTerminateHandler:
                         ; a0 := pointer to kbdvbase
                         KBDVBASE_copy           BufferSysIkbdvbase,a0
+                        KBDVBASE_waitWhileBusy  a0
+                        KBDVBASE_setHandler     a0,KBDVBASE_mousevec,BufferSysMouseHandlr
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_joyvec,BufferSysJoystckHandlr
                         ; ========
