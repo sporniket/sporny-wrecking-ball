@@ -126,9 +126,11 @@ CanStart:               ; --------
                         ; ========
                         ; -- setup joystick handling
                         ; a0 := pointer to kbdvbase
-                        SaveSysIkbdHandler      BufferSysIkbdvbase,BufferSysJoystckHandlr,a0,KBDVBASE_joyvec
-                        WaitForIdleIkbdHandlers a0
-                        move.l                  #OnJoystickSysEvent,KBDVBASE_joyvec(a0)
+                        KBDVBASE_fetchInto      a0
+                        KBDVBASE_copy           a0,BufferSysIkbdvbase 
+                        KBDVBASE_backupHandler  a0,KBDVBASE_joyvec,BufferSysJoystckHandlr
+                        KBDVBASE_waitWhileBusy  a0
+                        KBDVBASE_setHandler     a0,KBDVBASE_joyvec,#OnJoystickSysEvent
                         ; ========
                         ; -- setup palette
                         SaveSysPalette          BufferSysPalette
@@ -161,7 +163,13 @@ EndOfApp:
                         Print                   messTheEnd
                         WaitInp
                         Print                   vt52ClearScreen
-                        RestoreSysIkbdHandler   BufferSysIkbdvbase,BufferSysJoystckHandlr,a0,KBDVBASE_joyvec
+                        ; ========
+                        ; Restore ikbd handlers
+                        ; a0 := pointer to kbdvbase
+                        KBDVBASE_copy           BufferSysIkbdvbase,a0
+                        KBDVBASE_waitWhileBusy  a0
+                        KBDVBASE_setHandler     a0,KBDVBASE_joyvec,BufferSysJoystckHandlr
+                        ; ========
                         RestoreSavedPalette     BufferSysPalette
                         ; ========
                         lea                     BufferSysState,a6
@@ -382,7 +390,11 @@ BuggyReturn:
                         rts
 
 HastilyTerminateHandler:
-                        RestoreSysIkbdHandler   BufferSysIkbdvbase,BufferSysJoystckHandlr,a0
+                        ; a0 := pointer to kbdvbase
+                        KBDVBASE_copy           BufferSysIkbdvbase,a0
+                        KBDVBASE_waitWhileBusy  a0
+                        KBDVBASE_setHandler     a0,KBDVBASE_joyvec,BufferSysJoystckHandlr
+                        ; ========
                         RestoreSavedPalette     BufferSysPalette
                         ; ========
                         lea                     BufferSysState,a6
