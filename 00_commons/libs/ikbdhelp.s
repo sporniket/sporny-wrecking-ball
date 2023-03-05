@@ -45,3 +45,105 @@ IKBD_CMD_STATUS_BIT     rs.b 0 ; 0x80 -- Status inquiry bit -- to be OR-ed with 
 IKBD_CMD_RESET_1        rs.b 0 ; 0x80 -- Reset -- first byte of the command
 
 ; ================================================================================================================
+; IKBD String -- a sequence of command for IKBD
+; ---
+; Modelisation-wise, it's like a Pascal string.
+;
+                        rsreset
+
+IkbdString_length       rs.b 1 ; Length in byte corrected for _ikbdws() (i.e. actual length - 1)
+IkbdString_firstByte    rs.b 1 ; Quick access to the first byte
+IkbdString_secondByte   rs.b 1 ; Quick access to the second byte
+IkbdString_thirdByte    rs.b 1 ; Quick access to the third byte
+IkbdString_buffer       rs.b 8 ; Remainder of the buffer
+
+SIZEOF_IkbdString       rs.b 0 ;
+EVENSIZEOF_IkbdString   rs.b 0 ;
+
+MAX_IkbdString_length   = 10 ; The string is 11 bytes long, thus 11 - 1 = 10. 
+
+
+; ================================================================================================================
+; Builder of a sequence of commands for IKBD
+; ---
+; Typical use, using a0 as pointer to the string :
+;       ikbd_withDefaultString      a0
+;       ikbd_pushFirstByte          a0,#IKBD_CMD_MS_OFF
+;       ikbd_pushSecondByte         a0,#IKBD_CMD_ST_JS_EVT
+;       ikbd_send                   a0
+; ================================================================================================================
+ikbd_withString         macro
+                        ;1 - address of the IkbdString to use
+                        ;2 - address registry to use, will point to the IkbdString
+                        move.l \1,\2
+                        endm
+
+ikbd_withDefaultString  macro
+                        ;1 - address registry to use, will point to the string
+                        lea IKBD_CMD_BUFFER,\1
+                        endm
+
+ikbd_pushFirstByte      macro
+                        ;1 - address registry pointing to the string
+                        ;2 - first byte to push
+                        move.b #0,IkbdString_length(\1)
+                        move.b \2,IkbdString_firstByte(\1)
+                        endm
+
+ikbd_pushSecondByte     macro
+                        ;1 - address registry pointing to the string
+                        ;2 - byte to push
+                        move.b #1,IkbdString_length(\1)
+                        move.b \2,IkbdString_secondByte(\1)
+                        endm
+
+ikbd_pushThirdByte      macro
+                        ;1 - address registry pointing to the string
+                        ;2 - byte to push
+                        move.b #2,IkbdString_length(\1)
+                        move.b \2,IkbdString_thirdByte(\1)
+                        endm
+
+ikbd_pushByte           macro
+                        ;1 - address registry pointing to the string
+                        ;2 - byte to push
+                        ;3 - address registry to work, restored after use
+                        ;4 - data registry to work, restored after use
+                        ; ---
+                        ; save work data register
+                        move.l  \4,-(sp)
+                        ; --- test whether the string is already full
+                        moveq   #0,\4
+                        move.b  IkbdString_length(\1),\4
+                        cmp.b   #MAX_IkbdString_length,\4
+                        bhs .bufferFull\@
+                        ; ---
+                        ; we can push another byte, save work register
+                        move.l  \3,-(sp)
+                        addq    #1,\4 ; pre-compute length after operation
+                        ; \3 := start of buffer + updated length
+                        lea IkbdString_firstByte(\1),\3 
+                        add.l \4,\3
+                        ; write byte
+                        move.b \2,(\3)
+                        ; save updated length
+                        move.b \4,IkbdString_length(\1)
+                        ; ---
+                        ; done, restore work registers
+                        move.l (sp)+,\3
+.bufferFull\@           move.l (sp)+,\4
+                        endm
+
+ikbd_send               macro
+                        ;1 - address registry pointing to the string
+                        _xos_ikbdws IkbdString_length(\1),IkbdString_firstByte(\1)
+                        endm
+
+; ================================================================================================================
+
+; ================================================================================================================
+
+; ================================================================================================================
+; IKBD Command buffer
+IKBD_CMD_BUFFER         ds.b EVENSIZEOF_IkbdString ; 20 bytes, should be enough for most cases
+                        even
