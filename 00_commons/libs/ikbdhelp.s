@@ -47,7 +47,8 @@ IKBD_CMD_RESET_1        rs.b 0 ; 0x80 -- Reset -- first byte of the command
 ; ================================================================================================================
 ; IKBD String -- a sequence of command for IKBD
 ; ---
-; Modelisation-wise, it's like a Pascal string.
+; Modelisation-wise, it's like a Pascal string. And to avoid the general management of an accumulator in most case
+; when one send up to three bytes, the three first bytes are directly accessible.
 ;
                         rsreset
 
@@ -72,17 +73,26 @@ MAX_IkbdString_length   = 10 ; The string is 11 bytes long, thus 11 - 1 = 10.
 ;       ikbd_pushSecondByte         a0,#IKBD_CMD_ST_JS_EVT
 ;       ikbd_send                   a0
 ; ================================================================================================================
+; ================================================================================================================
+; Init the given address register as a pointer to the given IKBD string
+;
 ikbd_withString         macro
                         ;1 - address of the IkbdString to use
                         ;2 - address registry to use, will point to the IkbdString
                         move.l \1,\2
                         endm
 
+; ================================================================================================================
+; Init the given address register as a pointer to the default IKBD string
+;
 ikbd_withDefaultString  macro
                         ;1 - address registry to use, will point to the string
                         lea IKBD_CMD_BUFFER,\1
                         endm
 
+; ================================================================================================================
+; Push the first byte, and reset the size to a one byte long sequence.
+;
 ikbd_pushFirstByte      macro
                         ;1 - address registry pointing to the string
                         ;2 - first byte to push
@@ -90,6 +100,9 @@ ikbd_pushFirstByte      macro
                         move.b \2,IkbdString_firstByte(\1)
                         endm
 
+; ================================================================================================================
+; Push the second byte, and set the size to a two bytes long sequence. 
+;
 ikbd_pushSecondByte     macro
                         ;1 - address registry pointing to the string
                         ;2 - byte to push
@@ -97,6 +110,9 @@ ikbd_pushSecondByte     macro
                         move.b \2,IkbdString_secondByte(\1)
                         endm
 
+; ================================================================================================================
+; Push the third byte, and set the size to a three bytes long sequence. 
+;
 ikbd_pushThirdByte      macro
                         ;1 - address registry pointing to the string
                         ;2 - byte to push
@@ -104,6 +120,21 @@ ikbd_pushThirdByte      macro
                         move.b \2,IkbdString_thirdByte(\1)
                         endm
 
+ikbd_ifFullGoto         macro
+                        ;1 - address registry pointing to the string
+                        ;2 - the label to go to when the string is full
+                        ;3 - data regitry to work, NOT restored after use
+                        moveq   #0,\3
+                        move.b  IkbdString_length(\1),\3
+                        cmp.b   #MAX_IkbdString_length,\3
+                        bhs \2 ; Branch if \3 is Higher or Same
+                        endm
+
+; ================================================================================================================
+; General process of pushing a byte and updating the size accordingly, provided that there is still enough space
+; to host the supplemental byte.
+; When the buffer is full, there is no change.
+;
 ikbd_pushByte           macro
                         ;1 - address registry pointing to the string
                         ;2 - byte to push
@@ -113,6 +144,7 @@ ikbd_pushByte           macro
                         ; save work data register
                         move.l  \4,-(sp)
                         ; --- test whether the string is already full
+                        ; REPLACE WITH : ikbd_ifFullGoto \1,.bufferFull\@,\4
                         moveq   #0,\4
                         move.b  IkbdString_length(\1),\4
                         cmp.b   #MAX_IkbdString_length,\4
@@ -144,6 +176,8 @@ ikbd_send               macro
 ; ================================================================================================================
 
 ; ================================================================================================================
-; IKBD Command buffer
+; Default IKBD String
+;
 IKBD_CMD_BUFFER         ds.b EVENSIZEOF_IkbdString ; 20 bytes, should be enough for most cases
                         even
+; ================================================================================================================
