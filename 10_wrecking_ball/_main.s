@@ -118,9 +118,11 @@ CanStart:               ; --------
                         ; Disable mouse
                         ; a0 := pointer to ikbd string to build
                         ikbd_withString         a0,#IKBD_CMD_BUFFER
+                        ;ikbd_pushFirstByte      a0,#IKBD_CMD_ST_JS_EVT
+                        ;ikbd_pushSecondByte     a0,#IKBD_CMD_ST_MS_REL
                         ikbd_pushFirstByte      a0,#IKBD_CMD_MS_OFF
-                        ; ikbd_send               a0
-                        IkbdSetup
+                        ikbd_send               a0
+                        ; WHAT THE ? it works like that !!
                         ; ========
                         Print                   vt52ClearScreen
                         bsr                     CheckHardwareOrDie
