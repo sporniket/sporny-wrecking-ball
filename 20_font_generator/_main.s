@@ -21,11 +21,11 @@
 ; ================================================================================================================
 ; Input macros
 IkbdSetup                macro
-                        _xos_ikbdws                 1, ikbdSetupSequence
+                        _xos_ikbdws                 #1, ikbdSetupSequence
                         endm
 ;
 IkbdRestore                 macro
-                        _xos_ikbdws                 1, ikbdRestoreSequence
+                        _xos_ikbdws                 #1, ikbdRestoreSequence
                         endm
 ;
 Print                   macro
