@@ -127,7 +127,7 @@ ikbd_ifFullGoto         macro
                         moveq   #0,\3
                         move.b  IkbdString_length(\1),\3
                         cmp.b   #MAX_IkbdString_length,\3
-                        bhs \2 ; Branch if \3 is Higher or Same
+                        bhs     \2 ; Branch if \3 is Higher or Same
                         endm
 
 ; ================================================================================================================
@@ -148,18 +148,18 @@ ikbd_pushByte           macro
                         moveq   #0,\4
                         move.b  IkbdString_length(\1),\4
                         cmp.b   #MAX_IkbdString_length,\4
-                        bhs .bufferFull\@
+                        bhs     .bufferFull\@
                         ; ---
                         ; we can push another byte, save work register
                         move.l  \3,-(sp)
                         addq    #1,\4 ; pre-compute length after operation
                         ; \3 := start of buffer + updated length
-                        lea IkbdString_firstByte(\1),\3 
-                        add.l \4,\3
+                        lea     IkbdString_firstByte(\1),\3 
+                        add.l   \4,\3
                         ; write byte
-                        move.b \2,(\3)
+                        move.b  \2,(\3)
                         ; save updated length
-                        move.b \4,IkbdString_length(\1)
+                        move.b  \4,IkbdString_length(\1)
                         ; ---
                         ; done, restore work registers
                         move.l (sp)+,\3
