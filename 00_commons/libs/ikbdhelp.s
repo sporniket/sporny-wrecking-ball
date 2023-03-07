@@ -52,16 +52,16 @@ IKBD_CMD_RESET_1        rs.b 0 ; 0x80 -- Reset -- first byte of the command
 ;
                         rsreset
 
-IkbdString_length       rs.b 1 ; Length in byte corrected for _ikbdws() (i.e. actual length - 1)
+IkbdString_length       rs.w 1 ; Length in bytes corrected for _ikbdws() (i.e. actual length - 1)
 IkbdString_firstByte    rs.b 1 ; Quick access to the first byte
 IkbdString_secondByte   rs.b 1 ; Quick access to the second byte
 IkbdString_thirdByte    rs.b 1 ; Quick access to the third byte
-IkbdString_buffer       rs.b 8 ; Remainder of the buffer
+IkbdString_buffer       rs.b 9 ; Remainder of the buffer
 
 SIZEOF_IkbdString       rs.b 0 ;
 EVENSIZEOF_IkbdString   rs.b 0 ;
 
-MAX_IkbdString_length   = 10 ; The string is 11 bytes long, thus 11 - 1 = 10. 
+MAX_IkbdString_length   = 11 ; The string is 12 bytes long, thus 12 - 1 = 11. 
 
 
 ; ================================================================================================================
@@ -88,7 +88,7 @@ ikbd_withString         macro
 ikbd_pushFirstByte      macro
                         ;1 - <<this>>, address registry pointing to the string
                         ;2 - first byte to push
-                        move.b #0,IkbdString_length(\1)
+                        move.w #0,IkbdString_length(\1)
                         move.b \2,IkbdString_firstByte(\1)
                         endm
 
@@ -98,7 +98,7 @@ ikbd_pushFirstByte      macro
 ikbd_pushSecondByte     macro
                         ;1 - <<this>>, address registry pointing to the string
                         ;2 - byte to push
-                        move.b #1,IkbdString_length(\1)
+                        move.w #1,IkbdString_length(\1)
                         move.b \2,IkbdString_secondByte(\1)
                         endm
 
@@ -108,7 +108,7 @@ ikbd_pushSecondByte     macro
 ikbd_pushThirdByte      macro
                         ;1 - <<this>>, address registry pointing to the string
                         ;2 - byte to push
-                        move.b #2,IkbdString_length(\1)
+                        move.w #2,IkbdString_length(\1)
                         move.b \2,IkbdString_thirdByte(\1)
                         endm
 
@@ -117,8 +117,8 @@ ikbd_ifFullGoto         macro
                         ;2 - the label to go to when the string is full
                         ;3 - data regitry to work, NOT restored after use
                         moveq   #0,\3
-                        move.b  IkbdString_length(\1),\3
-                        cmp.b   #MAX_IkbdString_length,\3
+                        move.w  IkbdString_length(\1),\3
+                        cmp.w   #MAX_IkbdString_length,\3
                         bhs     \2 ; Branch if \3 is Higher or Same
                         endm
 
@@ -138,20 +138,20 @@ ikbd_pushByte           macro
                         ; --- test whether the string is already full
                         ; REPLACE WITH : ikbd_ifFullGoto \1,.bufferFull\@,\4
                         moveq   #0,\4
-                        move.b  IkbdString_length(\1),\4
-                        cmp.b   #MAX_IkbdString_length,\4
+                        move.w  IkbdString_length(\1),\4
+                        cmp.w   #MAX_IkbdString_length,\4
                         bhs     .bufferFull\@
                         ; ---
                         ; we can push another byte, save work register
                         move.l  \3,-(sp)
-                        addq    #1,\4 ; pre-compute length after operation
+                        addq.w  #1,\4 ; pre-compute length after operation
                         ; \3 := start of buffer + updated length
                         lea     IkbdString_firstByte(\1),\3 
                         add.l   \4,\3
                         ; write byte
                         move.b  \2,(\3)
                         ; save updated length
-                        move.b  \4,IkbdString_length(\1)
+                        move.w  \4,IkbdString_length(\1)
                         ; ---
                         ; done, restore work registers
                         move.l (sp)+,\3
