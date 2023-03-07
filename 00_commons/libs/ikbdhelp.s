@@ -68,33 +68,25 @@ MAX_IkbdString_length   = 10 ; The string is 11 bytes long, thus 11 - 1 = 10.
 ; Builder of a sequence of commands for IKBD
 ; ---
 ; Typical use, using a0 as pointer to the string :
-;       ikbd_withDefaultString      a0
-;       ikbd_pushFirstByte          a0,#IKBD_CMD_MS_OFF
-;       ikbd_pushSecondByte         a0,#IKBD_CMD_ST_JS_EVT
-;       ikbd_send                   a0
+;       ikbd_withString      a0,#IKBD_CMD_BUFFER
+;       ikbd_pushFirstByte   a0,#IKBD_CMD_MS_OFF
+;       ikbd_pushSecondByte  a0,#IKBD_CMD_ST_JS_EVT
+;       ikbd_send            a0
 ; ================================================================================================================
 ; ================================================================================================================
 ; Init the given address register as a pointer to the given IKBD string
 ;
 ikbd_withString         macro
-                        ;1 - address of the IkbdString to use
-                        ;2 - address registry to use, will point to the IkbdString
-                        move.l \1,\2
-                        endm
-
-; ================================================================================================================
-; Init the given address register as a pointer to the default IKBD string
-;
-ikbd_withDefaultString  macro
-                        ;1 - address registry to use, will point to the string
-                        lea IKBD_CMD_BUFFER,\1
+                        ;1 - <<this>>, address registry to use, will point to the IkbdString
+                        ;2 - address of the IkbdString to use
+                        move.l \2,\1
                         endm
 
 ; ================================================================================================================
 ; Push the first byte, and reset the size to a one byte long sequence.
 ;
 ikbd_pushFirstByte      macro
-                        ;1 - address registry pointing to the string
+                        ;1 - <<this>>, address registry pointing to the string
                         ;2 - first byte to push
                         move.b #0,IkbdString_length(\1)
                         move.b \2,IkbdString_firstByte(\1)
@@ -104,7 +96,7 @@ ikbd_pushFirstByte      macro
 ; Push the second byte, and set the size to a two bytes long sequence. 
 ;
 ikbd_pushSecondByte     macro
-                        ;1 - address registry pointing to the string
+                        ;1 - <<this>>, address registry pointing to the string
                         ;2 - byte to push
                         move.b #1,IkbdString_length(\1)
                         move.b \2,IkbdString_secondByte(\1)
@@ -114,14 +106,14 @@ ikbd_pushSecondByte     macro
 ; Push the third byte, and set the size to a three bytes long sequence. 
 ;
 ikbd_pushThirdByte      macro
-                        ;1 - address registry pointing to the string
+                        ;1 - <<this>>, address registry pointing to the string
                         ;2 - byte to push
                         move.b #2,IkbdString_length(\1)
                         move.b \2,IkbdString_thirdByte(\1)
                         endm
 
 ikbd_ifFullGoto         macro
-                        ;1 - address registry pointing to the string
+                        ;1 - <<this>>, address registry pointing to the string
                         ;2 - the label to go to when the string is full
                         ;3 - data regitry to work, NOT restored after use
                         moveq   #0,\3
@@ -136,7 +128,7 @@ ikbd_ifFullGoto         macro
 ; When the buffer is full, there is no change.
 ;
 ikbd_pushByte           macro
-                        ;1 - address registry pointing to the string
+                        ;1 - <<this>>, address registry pointing to the string
                         ;2 - byte to push
                         ;3 - address registry to work, restored after use
                         ;4 - data registry to work, restored after use
@@ -167,17 +159,10 @@ ikbd_pushByte           macro
                         endm
 
 ikbd_send               macro
-                        ;1 - address registry pointing to the string
+                        ;1 - <<this>>, address registry pointing to the string
                         _xos_ikbdws IkbdString_length(\1),IkbdString_firstByte(\1)
                         endm
 
 ; ================================================================================================================
 
-; ================================================================================================================
-
-; ================================================================================================================
-; Default IKBD String
-;
-IKBD_CMD_BUFFER         ds.b EVENSIZEOF_IkbdString ; 20 bytes, should be enough for most cases
-                        even
 ; ================================================================================================================
