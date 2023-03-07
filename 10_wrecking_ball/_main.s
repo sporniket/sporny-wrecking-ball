@@ -16,6 +16,7 @@
                         include                 'macros/dmasnd.s'
                         include                 'macros/special.s'
                         include                 'macros/blitter.s'
+                        include                 'libs/ikbdhelp.s' ; FIXME -- move to macros
 
 ; ================================================================================================================
 ; Definition of the map of the Heap
@@ -42,7 +43,7 @@ SetupHeapAddress        macro
 ; FIXME : rewrite the macro so that the sequence would be encoded as : (length or length - 1) + (sequence)
 ; ----------------------------------------------------------------------------------------------------------------
 IkbdSetup                macro
-                        _xos_ikbdws                 1, ikbdSetupSequence
+                        _xos_ikbdws                 #1,ikbdSetupSequence
                         endm
 
 ; ----------------------------------------------------------------------------------------------------------------
@@ -51,7 +52,7 @@ IkbdSetup                macro
 ; FIXME : rewrite the macro so that the sequence would be encoded as : (length or length - 1) + (sequence)
 ; ----------------------------------------------------------------------------------------------------------------
 IkbdRestore                 macro
-                        _xos_ikbdws                 1, ikbdRestoreSequence
+                        _xos_ikbdws                 #1,ikbdRestoreSequence
                         endm
 
 ; ================================================================================================================
@@ -114,7 +115,13 @@ CanStart:               ; --------
                         ;
                         ; TPA management DONE
                         ; ========
+                        ; Disable mouse
+                        ; a0 := pointer to ikbd string to build
+                        ikbd_withString         a0,#IKBD_CMD_BUFFER
+                        ikbd_pushFirstByte      a0,#IKBD_CMD_MS_OFF
+                        ; ikbd_send               a0
                         IkbdSetup
+                        ; ========
                         Print                   vt52ClearScreen
                         bsr                     CheckHardwareOrDie
 
@@ -138,6 +145,13 @@ CanStart:               ; --------
                         KBDVBASE_setHandler     a0,KBDVBASE_joyvec,#OnJoystickSysEvent
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_mousevec,#OnMouseSysEvent
+                        ; ========
+                        ; Enable mouse and joysticks
+                        ; a0 := pointer to ikbd string to build
+                        ikbd_withString         a0,#IKBD_CMD_BUFFER
+                        ikbd_pushFirstByte      a0,#IKBD_CMD_ST_JS_EVT
+                        ikbd_pushSecondByte     a0,#IKBD_CMD_ST_MS_REL
+                        ;ikbd_send               a0
                         ; ========
                         ; -- setup palette
                         SaveSysPalette          BufferSysPalette
@@ -529,10 +543,16 @@ screenBase              dc.l                    0
 ; bitplan 0 and 1 for drawing, thus 6 bitplans counting the masking.)
 appPalette              dc.w                    $0423,$0112,$0c44,$0ded,$0336,$0555,$0843,$0362
                         dc.w                    $0776,$057c,$0c73,$0899,$06a3,$0ca9,$06bc,$0dc6
+
+; ================================================================================================================
+; ikbd string buffer, to be used with ikbdhelp.s
+IKBD_CMD_BUFFER         ds.b EVENSIZEOF_IkbdString ; 20 bytes, should be enough for most cases
+                        even
+; ================================================================================================================
 ; Ikbd instructions for ikbdws, see the Atari compendium
 ikbdMsOffJoyOff         dc.b                    $12, $1a                ; byte count = 2 - 1 = 1
-ikbdSetupSequence          dc.b                    $12, $14                ; byte count = 2 - 1 = 1
-ikbdRestoreSequence        dc.b                    $14, $08                ; byte count = 2 - 1 = 1
+ikbdSetupSequence       dc.b                    IKBD_CMD_MS_OFF, IKBD_CMD_ST_JS_EVT                ; byte count = 2 - 1 = 1
+ikbdRestoreSequence     dc.b                    IKBD_CMD_ST_JS_EVT, IKBD_CMD_ST_MS_REL                ; byte count = 2 - 1 = 1
                         even
 ; VT-52 sequences (C-Strings)
 vt52ClearScreen         dc.b                    27,"E",0
