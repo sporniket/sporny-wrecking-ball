@@ -60,6 +60,6 @@ log_info "Scanning commons dependencies..."
 scan_dependencies_deeply "COMMONS_MACROS" "${DIR_COMMONS_MACROS}" "*.s" > "${FILE_TARGET}"
 scan_dependencies_deeply "COMMONS_LIBS" "${DIR_COMMONS_LIBS}" "*.s" >> "${FILE_TARGET}"
 
-for prj in $(ls -d [1-4][0-9]_*); do
+for prj in $(ls -d [1-9][0-9]_*); do
   scan_project "${prj}"
 done

@@ -1,4 +1,4 @@
-SUBDIRS := 10_wrecking_ball  20_font_extractor  20_font_generator  20_level_generator  20_sheet_extractor  30_check_hardware
+SUBDIRS := 10_wrecking_ball  20_font_extractor  20_font_generator  20_level_generator  20_sheet_extractor  30_check_hardware 99_ci
 
 all: $(SUBDIRS)
 
@@ -17,6 +17,8 @@ lvlgen: 20_level_generator
 sheetext: 20_sheet_extractor
 
 checkhw: 30_check_hardware
+
+ci: 99_ci
 
 # end of aliases
 .PHONY: all clean $(SUBDIRS)

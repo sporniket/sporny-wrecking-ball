@@ -9,6 +9,7 @@ Launch hatari with the given program
 \e[96mGoals:\e[0m
   \e[93mswb\e[0m       Autoruns the game program
   \e[93msheetext\e[0m  Autoruns the sprite sheet extractor.
+  \e[93mci\e[0m        Autoruns the continuous integration program.
   \e[93mdesktop\e[0m   Start hatari to the desktop, using the build folder as a GEMDOS drive.
   \e[93m*\e[0m         Help
 "
@@ -16,7 +17,7 @@ Launch hatari with the given program
 }
 
 case "$1" in
-  swb|sheetext)
+  swb|sheetext|ci)
     AUTORUN="${AUTORUN_PREFIX}${1^^}.PRG"
     log_info "Starting ${1} as ${AUTORUN}"
     hatari --harddrive "${GEMDOS_DRIVE}" --auto "${AUTORUN}"

@@ -13,6 +13,7 @@ Essentially, an alias to 'make'
   \e[93mlvlgen\e[0m    The level files generator.
   \e[93msheetext\e[0m  The sprite sheet extractor.
   \e[93mcheckhw\e[0m   An hardware test program.
+  \e[93mci\e[0m        A continuous integration program.
   \e[93mall\e[0m       makes all
   \e[93m*\e[0m         Help
 "
@@ -20,7 +21,7 @@ Essentially, an alias to 'make'
 }
 
 case "$1" in
-  swb|fontext|fontgen|lvlgen|sheetext|checkhw|all)
+  swb|fontext|fontgen|lvlgen|sheetext|checkhw|ci|all)
     make "${1}"
     ;;
   *)
