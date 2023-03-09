@@ -1,5 +1,5 @@
 ; ================================================================================================================
-; (C) 2020 David SPORN
+; (C) 2023 David SPORN
 ; Distributed AS IS, in the hope that it will be useful, but WITHOUT ANY WARRANTY
 ; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ; ================================================================================================================
@@ -14,6 +14,8 @@
                         include                 'macros/tricks.s'
                         include                 'macros/special.s'
                         include                 'macros/fileio.s'
+                        ; files under test
+                        include                 'libs/ikbdhelp.s'
 
 
 ; ================================================================================================================
@@ -66,7 +68,12 @@ PrintBottom             macro
                         Println                 messVisualBorderBottom
                         PrintNewLine
                         endm
-
+;
+PromptForKey            macro
+                        PrintNewLine
+                        Println                 messPromptForKey
+                        WaitInp
+                        endm
 ; ================================================================================================================
 ; Main
 ; ================================================================================================================
@@ -90,6 +97,7 @@ START_OF_CI:
 ; ----------------------------------------------------------------------------------------------------------------
 ; Each test suite = one file to include
 ; ----------------------------------------------------------------------------------------------------------------
+                        include 'ikbdhelp.s'
 ; ----------------------------------------------------------------------------------------------------------------
 ; After all tests
 ; ----------------------------------------------------------------------------------------------------------------
@@ -117,7 +125,7 @@ messCls                 dc.b                    27,"E",0
 messNewLine             dc.b                    10,13,0
 messThatsAll            dc.b                    "Done, press any key to quit.",0
 messFail                dc.b                    "FAIL ",0
-messPass                dc.b                    "pass ",0
+messPass                dc.b                    "     ",0
 messVisualBorderTop     dc.b                    "########",0
 messVisualBorderLeft    dc.b                    "# ",0
 messVisualBorderBottom  dc.b                    "--------",0
@@ -125,3 +133,4 @@ messBannerCi            dc.b                    "~~~< START Continuous Integrati
 messBannerStats         dc.b                    "~~~< RESULTS >~~~",0
 messStatsTotal          dc.b                    "Tests : ...",0
 messStatsFailed         dc.b                    "Fails : ...",0
+messPromptForKey        dc.b                    "--< Press a key to continue >--",0
