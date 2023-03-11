@@ -30,7 +30,7 @@ IKBDHELP_makeTestEnum   macro
 .end_\@                 nop
                         endm
 ; ================================================================================================================
-; test 1
+; test 1 -- Each enum value should have expected value
 ;
 IKBDHELP_test1
                         IKBDHELP_makeTestEnum   IKBD_CMD_,$0
@@ -66,11 +66,53 @@ IKBDHELP_test1
                         IKBDHELP_makeTestEnum   IKBD_CMD_EXEC,$22
                         IKBDHELP_makeTestEnum   IKBD_CMD_STATUS_BIT,$80
                         IKBDHELP_makeTestEnum   IKBD_CMD_RESET_1,$80
+                        PrintNewLine
+
+                        IKBDHELP_makeTestEnum   IkbdString_length,0
+                        IKBDHELP_makeTestEnum   IkbdString_firstByte,2
+                        IKBDHELP_makeTestEnum   IkbdString_secondByte,3
+                        IKBDHELP_makeTestEnum   IkbdString_thirdByte,4
+                        IKBDHELP_makeTestEnum   IkbdString_buffer,5
+                        IKBDHELP_makeTestEnum   SIZEOF_IkbdString,14
+                        IKBDHELP_makeTestEnum   EVENSIZEOF_IkbdString,14
+                        PrintNewLine
 ENDOF_IKBDHELP_test1
 
 
 ; ================================================================================================================
+; test 2 : test of the ikbd string description (offset)
 ; ================================================================================================================
+IKBDHELP_test2
+                        ikbd_withString         a6,#.ikbdStrBuffer
+                        ikbd_pushFirstByte      a6,#IKBD_CMD_MS_OFF
+                        ; then IkbdString_length(a6) == 0
+                        moveq           #0,d0
+                        move.w          IkbdString_length(a6),d0
+                        beq             .lengthIsGood
+                        PrintFail       .messDescLength
+                        bra             .testByte
+.lengthIsGood           PrintPass       .messDescLength
+                        ; then IkbdString_firstByte(a6) == IKBD_CMD_MS_OFF
+.testByte               move.b          IkbdString_firstByte(a6),d0
+                        cmp.b           #IKBD_CMD_MS_OFF,d0
+                        beq             .byteIsGood
+                        PrintFail       .messDescContent
+                        PrintContinue   .messDescContent2
+                        ; convert d0 into string and print
+                        ; a5 := string buffer
+                        lea             strbufIntToAscii,a5
+                        jsrA_itoa_appHexUint8   a5,d0
+                        PrintContinue   strbufIntToAscii
+                        bra             ENDOF_IKBDHELP_test2
+.byteIsGood             PrintPass       .messDescContent
+                        PrintContinue   .messDescContent2
+                        bra             ENDOF_IKBDHELP_test2               
+.ikbdStrBuffer          ds.b EVENSIZEOF_IkbdString
+.messDescLength         dc.b "IkbdString_firstByte length = 0",0
+.messDescContent        dc.b "IkbdString_firstByte byte = ...",0
+.messDescContent2       dc.b "...IKBD_CMD_MS_OFF",0
+                        even
+ENDOF_IKBDHELP_test2    PromptForKey
 ; ================================================================================================================
 ; ================================================================================================================
 ; ================================================================================================================

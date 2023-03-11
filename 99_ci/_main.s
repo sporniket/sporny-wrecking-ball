@@ -57,6 +57,11 @@ PrintFail               macro
                         Println                 \1
                         endm
 ;
+PrintContinue           macro
+                        Print                   messContinue
+                        Println                 \1
+                        endm
+;
 PrintHeader             macro
                         Println                 messVisualBorderTop
                         Print                   messVisualBorderLeft
@@ -78,13 +83,17 @@ PromptForKey            macro
 ; Main
 ; ================================================================================================================
                         Print                   messCls
-                        bsr                     START_OF_CI
+                        jsr                     START_OF_CI 
 
 ThatsAll:
                         PrintNewLine
                         Print                   messThatsAll
                         WaitInp
                         Terminate
+; ================================================================================================================
+; Libraries includes
+; ================================================================================================================
+                        include                 'libs/itoa.s'
 ; ================================================================================================================
 ; Entry point
 ; ================================================================================================================
@@ -125,7 +134,8 @@ messCls                 dc.b                    27,"E",0
 messNewLine             dc.b                    10,13,0
 messThatsAll            dc.b                    "Done, press any key to quit.",0
 messFail                dc.b                    "FAIL ",0
-messPass                dc.b                    "     ",0
+messPass                dc.b                    "ok   ",0
+messContinue            dc.b                    "|    ",0
 messVisualBorderTop     dc.b                    "########",0
 messVisualBorderLeft    dc.b                    "# ",0
 messVisualBorderBottom  dc.b                    "--------",0
@@ -134,3 +144,5 @@ messBannerStats         dc.b                    "~~~< RESULTS >~~~",0
 messStatsTotal          dc.b                    "Tests : ...",0
 messStatsFailed         dc.b                    "Fails : ...",0
 messPromptForKey        dc.b                    "--< Press a key to continue >--",0
+; ----------------------------------------------------------------------------------------------------------------
+strbufIntToAscii        ds.b                    32
