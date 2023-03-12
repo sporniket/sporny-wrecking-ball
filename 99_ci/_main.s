@@ -62,6 +62,12 @@ PrintContinue           macro
                         Println                 \1
                         endm
 ;
+PrintContinue2          macro
+                        Print                   messContinue
+                        Print                   \1
+                        Println                 \2
+                        endm
+;
 PrintHeader             macro
                         Println                 messVisualBorderTop
                         Print                   messVisualBorderLeft
@@ -106,6 +112,7 @@ START_OF_CI:
 ; ----------------------------------------------------------------------------------------------------------------
 ; Each test suite = one file to include
 ; ----------------------------------------------------------------------------------------------------------------
+                        include 'itoa.s'
                         include 'ikbdhelp.s'
 ; ----------------------------------------------------------------------------------------------------------------
 ; After all tests
