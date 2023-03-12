@@ -44,7 +44,7 @@ ITOA_makePrintHexFromByte macro
                         ; ---
                         ; failed
                         PrintFail       .messDesc_\@
-                        PrintContinue2  .messGot_\@,.strbuf_\@
+                        PrintContinue2  messGot,.strbuf_\@
                         bra             .end_\@
                         ; --- 
                         ; repeat until end of string
@@ -56,7 +56,6 @@ ITOA_makePrintHexFromByte macro
 .pass_\@                PrintPass .messDesc_\@
                         bra .end_\@
 .messDesc_\@            dc.b "appHexUint8(\3) = '",\4,"'",0
-.messGot_\@             dc.b "...got ",0
 .strbuf_\@              ds.b 20
 .strexpected_\@         dc.b \4,0
                         even

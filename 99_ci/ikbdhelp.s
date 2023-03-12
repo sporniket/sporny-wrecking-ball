@@ -96,13 +96,13 @@ IKBDHELP_test2
 .testByte               move.b          IkbdString_firstByte(a6),d0
                         cmp.b           #IKBD_CMD_MS_OFF,d0
                         beq             .byteIsGood
-                        PrintFail       .messDescContent
-                        PrintContinue   .messDescContent2
                         ; convert d0 into string and print
                         ; a5 := string buffer
                         lea             strbufIntToAscii,a5
                         jsrA_itoa_appHexUint8   a5,d0
-                        PrintContinue   strbufIntToAscii
+                        PrintFail       .messDescContent
+                        PrintContinue   .messDescContent2
+                        PrintContinue2  messGot,strbufIntToAscii
                         bra             ENDOF_IKBDHELP_test2
 .byteIsGood             PrintPass       .messDescContent
                         PrintContinue   .messDescContent2

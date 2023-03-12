@@ -143,6 +143,7 @@ messThatsAll            dc.b                    "Done, press any key to quit.",0
 messFail                dc.b                    "FAIL ",0
 messPass                dc.b                    "ok   ",0
 messContinue            dc.b                    "|    ",0
+messGot                 dc.b                    "  got ",0
 messVisualBorderTop     dc.b                    "########",0
 messVisualBorderLeft    dc.b                    "# ",0
 messVisualBorderBottom  dc.b                    "--------",0
