@@ -35,24 +35,17 @@ SetupHeapAddress        macro
                         lea                     \1(\2),\2
                         endm
 ; ================================================================================================================
-; IKBD setup and restore
-; FIXME : separate include (macros and sequences)
-; ----------------------------------------------------------------------------------------------------------------
-; Setup the ikbd to notify only event of interest (most likely disable the mouse).
-; ---
-; FIXME : rewrite the macro so that the sequence would be encoded as : (length or length - 1) + (sequence)
-; ----------------------------------------------------------------------------------------------------------------
-IkbdSetup                macro
-                        _xos_ikbdws                 #1,ikbdSetupSequence
-                        endm
-
-; ----------------------------------------------------------------------------------------------------------------
+; IKBD restore
+;
 ; Restore the ikbd settings (most likely enable the mouse).
-; ---
-; FIXME : rewrite the macro so that the sequence would be encoded as : (length or length - 1) + (sequence)
 ; ----------------------------------------------------------------------------------------------------------------
 IkbdRestore                 macro
-                        _xos_ikbdws                 #1,ikbdRestoreSequence
+                        ; ========
+                        ; Enable mouse (will disable joystick)
+                        ; a0 := pointer to ikbd string to build
+                        ikbd_withString         a0,#IKBD_CMD_BUFFER
+                        ikbd_pushFirstByte      a0,#IKBD_CMD_ST_MS_REL
+                        ikbd_send               a0
                         endm
 
 ; ================================================================================================================
@@ -115,14 +108,12 @@ CanStart:               ; --------
                         ;
                         ; TPA management DONE
                         ; ========
-                        ; Disable mouse
+                        ; Disable mouse and joystick
                         ; a0 := pointer to ikbd string to build
                         ikbd_withString         a0,#IKBD_CMD_BUFFER
-                        ;ikbd_pushFirstByte      a0,#IKBD_CMD_ST_JS_EVT
-                        ;ikbd_pushSecondByte     a0,#IKBD_CMD_ST_MS_REL
                         ikbd_pushFirstByte      a0,#IKBD_CMD_MS_OFF
+                        ikbd_pushSecondByte     a0,#IKBD_CMD_JS_OFF
                         ikbd_send               a0
-                        ; WHAT THE ? it works like that !!
                         ; ========
                         Print                   vt52ClearScreen
                         bsr                     CheckHardwareOrDie
@@ -146,14 +137,14 @@ CanStart:               ; --------
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_joyvec,#OnJoystickSysEvent
                         KBDVBASE_waitWhileBusy  a0
-                        KBDVBASE_setHandler     a0,KBDVBASE_mousevec,#OnMouseSysEvent
+                        ;KBDVBASE_setHandler     a0,KBDVBASE_mousevec,#OnMouseSysEvent
                         ; ========
-                        ; Enable mouse and joysticks
+                        ; Enable either joystick or mouse
                         ; a0 := pointer to ikbd string to build
                         ikbd_withString         a0,#IKBD_CMD_BUFFER
                         ikbd_pushFirstByte      a0,#IKBD_CMD_ST_JS_EVT
-                        ikbd_pushSecondByte     a0,#IKBD_CMD_ST_MS_REL
-                        ;ikbd_send               a0
+                        ;ikbd_pushSecondByte     a0,#IKBD_CMD_ST_MS_REL ; uncomment to use mouse (and disable joystick)
+                        ikbd_send               a0
                         ; ========
                         ; -- setup palette
                         SaveSysPalette          BufferSysPalette
@@ -201,7 +192,6 @@ EndOfApp:
                         move.w                  (a6)+,d7
                         ChangeToRez             d7
                         ; ========
-                        IkbdRestore
                         Terminate
 ;
 ; ================================================================================================================
@@ -551,11 +541,6 @@ appPalette              dc.w                    $0423,$0112,$0c44,$0ded,$0336,$0
 IKBD_CMD_BUFFER         ds.b EVENSIZEOF_IkbdString ; 20 bytes, should be enough for most cases
                         even
 ; ================================================================================================================
-; Ikbd instructions for ikbdws, see the Atari compendium
-ikbdMsOffJoyOff         dc.b                    $12, $1a                ; byte count = 2 - 1 = 1
-ikbdSetupSequence       dc.b                    IKBD_CMD_MS_OFF, IKBD_CMD_ST_JS_EVT                ; byte count = 2 - 1 = 1
-ikbdRestoreSequence     dc.b                    IKBD_CMD_ST_JS_EVT, IKBD_CMD_ST_MS_REL                ; byte count = 2 - 1 = 1
-                        even
 ; VT-52 sequences (C-Strings)
 vt52ClearScreen         dc.b                    27,"E",0
                         even
