@@ -80,7 +80,7 @@ ENDOF_IKBDHELP_test1
 
 
 ; ================================================================================================================
-; test 2 : test of the ikbd string description (offset)
+; test 2 : IkbdString_firstByte
 ; ================================================================================================================
 IKBDHELP_test2
                         ikbd_withString         a6,#.ikbdStrBuffer
@@ -108,12 +108,99 @@ IKBDHELP_test2
                         PrintContinue   .messDescContent2
                         bra             ENDOF_IKBDHELP_test2               
 .ikbdStrBuffer          ds.b EVENSIZEOF_IkbdString
-.messDescLength         dc.b "IkbdString_firstByte length = 0",0
-.messDescContent        dc.b "IkbdString_firstByte byte = ...",0
+.messDescLength         dc.b "ikbd_pushFirstByte length = 0",0
+.messDescContent        dc.b "ikbd_pushFirstByte byte = ...",0
 .messDescContent2       dc.b "...IKBD_CMD_MS_OFF",0
                         even
 ENDOF_IKBDHELP_test2    PromptForKey
 ; ================================================================================================================
+; ================================================================================================================
+; test 3 : IkbdString_firstByte
+; ================================================================================================================
+IKBDHELP_test3
+                        ; ---
+                        ; prepare
+                        ;
+                        ; ---
+                        ; execute
+                        ;
+                        ikbd_withString         a6,#.ikbdStrBuffer
+                        ikbd_pushFirstByte      a6,#IKBD_CMD_MS_OFF
+                        ikbd_pushSecondByte     a6,#IKBD_CMD_ST_JS_EVT
+                        ; ---
+                        ; verify that IkbdString_length(a6) == 1
+                        ;
+                        moveq           #0,d0
+                        move.w          IkbdString_length(a6),d0
+                        cmp.w           #1,d0
+                        beq             .lengthIsGood
+                        ; ---
+                        ; failed
+                        ;
+                        ; convert d0 into string and print
+                        ; a5 := string buffer
+                        lea             strbufIntToAscii,a5
+                        jsrA_itoa_appHexUint8   a5,d0
+                        PrintFail       .messDescLength
+                        PrintContinue2  messGot,strbufIntToAscii
+                        bra             .testByte1
+                        ; ---
+                        ; pass
+                        ;
+.lengthIsGood           PrintPass       .messDescLength
+                        ; ---
+                        ; verify that IkbdString_firstByte(a6) == IKBD_CMD_MS_OFF
+                        ;
+.testByte1              move.b          IkbdString_firstByte(a6),d0
+                        cmp.b           #IKBD_CMD_MS_OFF,d0
+                        beq             .byteIsGood
+                        ; ---
+                        ; failed
+                        ;
+                        ; convert d0 into string and print
+                        ; a5 := string buffer
+                        lea             strbufIntToAscii,a5
+                        jsrA_itoa_appHexUint8   a5,d0
+                        PrintFail       .messByte1Content
+                        PrintContinue   .messByte1Content2
+                        PrintContinue2  messGot,strbufIntToAscii
+                        bra             .testByte2
+                        ; ---
+                        ; pass
+                        ;
+.byteIsGood             PrintPass       .messByte1Content
+                        PrintContinue   .messByte1Content2
+                        ; ---
+                        ; verify that IkbdString_secondByte(a6) == IKBD_CMD_ST_JS_EVT
+                        ;
+.testByte2              move.b          IkbdString_secondByte(a6),d0
+                        cmp.b           #IKBD_CMD_ST_JS_EVT,d0
+                        beq             .byte2IsGood
+                        ; ---
+                        ; failed
+                        ;
+                        ; convert d0 into string and print
+                        ; a5 := string buffer
+                        lea             strbufIntToAscii,a5
+                        jsrA_itoa_appHexUint8   a5,d0
+                        PrintFail       .messByte2Content
+                        PrintContinue   .messByte2Content2
+                        PrintContinue2  messGot,strbufIntToAscii
+                        bra             ENDOF_IKBDHELP_test3
+                        ; ---
+                        ; pass
+                        ;
+.byte2IsGood            PrintPass       .messByte2Content
+                        PrintContinue   .messByte2Content2
+                        bra             ENDOF_IKBDHELP_test3   
+.ikbdStrBuffer          ds.b EVENSIZEOF_IkbdString
+.messDescLength         dc.b "ikbd_pushSecondByte length = 1",0
+.messByte1Content       dc.b "ikbd_pushSecondByte byte#1 = ...",0
+.messByte1Content2      dc.b "...IKBD_CMD_MS_OFF",0
+.messByte2Content       dc.b "ikbd_pushSecondByte byte#2 = ...",0
+.messByte2Content2      dc.b "...IKBD_CMD_ST_JS_EVT",0
+                        even
+ENDOF_IKBDHELP_test3    PromptForKey
 ; ================================================================================================================
 ; ================================================================================================================
 ; ================================================================================================================
