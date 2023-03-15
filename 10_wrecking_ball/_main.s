@@ -137,13 +137,13 @@ CanStart:               ; --------
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_joyvec,#OnJoystickSysEvent
                         KBDVBASE_waitWhileBusy  a0
-                        ;KBDVBASE_setHandler     a0,KBDVBASE_mousevec,#OnMouseSysEvent
+                        KBDVBASE_setHandler     a0,KBDVBASE_mousevec,#OnMouseSysEvent
                         ; ========
                         ; Enable either joystick or mouse
                         ; a0 := pointer to ikbd string to build
                         ikbd_withString         a0,#IKBD_CMD_BUFFER
                         ikbd_pushFirstByte      a0,#IKBD_CMD_ST_JS_EVT
-                        ;ikbd_pushSecondByte     a0,#IKBD_CMD_ST_MS_REL ; uncomment to use mouse (and disable joystick)
+                        ikbd_pushSecondByte     a0,#IKBD_CMD_ST_MS_REL ; uncomment to use mouse (and disable joystick)
                         ikbd_send               a0
                         ; ========
                         ; -- setup palette
@@ -445,24 +445,68 @@ BufferJoystate          dc.w                    0
 ; ---
 ; Update the mouse move and button states. Requires the mouse in relative mode.
 ; ----------------------------------------------------------------------------------------------------------------
-OnMouseSysEvent         movem                   a1,-(sp)
+OnMouseSysEvent         movem.l                 a0-a2/d0-d2,-(sp)       ; save context
+                        ; ---
+                        ; prepare the push
+                        ; ---
+                        ; a0 (given) : pointer to the 3 word long report
+                        ; a1 := pointer to the ring buffer
                         lea                     BufferMouseState,a1
-                        addq.l                  #1,a1                   ;skip high byte
-                        move.b                  (a0)+,(a1)+             ;button states
-                        addq.l                  #1,a1                   ;skip high byte
-                        move.b                  (a0)+,(a1)+             ;x move
-                        addq.l                  #1,a1                   ;skip high byte
-                        move.b                  (a0)+,(a1)+             ;y move
-                        movem                   (sp)+,a1
+                        ; d0 := next position for pushing data
+                        moveq                   #0,d0
+                        move.w                  2(a1),d0
+                        ; d1 := accumulator to compute the actual offset for pushing data
+                        ; x * 6 (length of item) = x * 2 + x * 6
+                        WdMul2                  d0 ; = 2*x
+                        move.l                  d0,d1 
+                        WdMul2                  d0 ; = 2*(2*x) = 4*x
+                        add.w                   d0,d1
+                        ; add the offset of the list
+                        add.w                   #6,d1 
+                        ;   a2 := pointer to the actual item to write into 
+                        move.l                  a1,a2
+                        add.l                   d1,a2
+                        ; ---
+                        ; performs the push
+                        ; ---
+                        addq.l                  #1,a2                   ;skip high byte
+                        move.b                  (a0)+,(a2)+             ;button states
+                        addq.l                  #1,a2                   ;skip high byte
+                        move.b                  (a0)+,(a2)+             ;x move
+                        addq.l                  #1,a2                   ;skip high byte
+                        move.b                  (a0)+,(a2)+             ;y move
+                        ; ---
+                        ; update the next position for pushing data
+                        ; ---
+                        ; a2 := cache pointer to the index value of next position for pushing data
+                        lea                     2(a1),a2
+                        ; d0 := the value to update
+                        move.w                  (a2),d0
+                        addq                    #1,d0 
+                        cmp.w                   0(a1),d0
+                        blo                     .doUpdate
+                        ; end of buffer reached, go back to start of buffer
+                        moveq                   #0,d0
+                        ; do the update
+.doUpdate               move.w                  d0,(a2)
+                        ; ---
+                        movem.l                 (sp)+,a0-a2/d0-d2       ; restore context
                         rts
 ; ---
 ; Mouse state (TODO a structure definition) 
 ; ---
-; * unsigned WORD : button states (bit 0 : left ; bit 1 : right)
-; * signed WORD : x move ; to be cleared after use
-; * signed WORD : y move ; to be cleared after use
+; This will be a 8 items ring buffer, so that the client app can assess when there is a new move
+; * Ring buffer management
+;   * unsigned WORD : capacity 
+;   * unsigned WORD : next position for pushing data
+;   * unsigned WORD : next position for pulling data (MUST be different of the position for pushing data)
+; * Ring buffer item
+;   * unsigned WORD : button states (bit 0 : left ; bit 1 : right)
+;   * signed WORD : x move ; to be cleared after use
+;   * signed WORD : y move ; to be cleared after use
 ; ----------------------------------------------------------------------------------------------------------------
-BufferMouseState        dc.w                    0,0,0
+BufferMouseState        dc.w                    8,0,0
+                        ds.w                    24 ; 8 items of 3 words
 ; ================================================================================================================
 ; Keyboard events
 ; ---
