@@ -15,7 +15,7 @@
                         include                 'macros/special.s'
                         include                 'macros/fileio.s'
                         ; files under test
-                        include                 'libs/ikbdhelp.s'
+                        include                 'macros/others/ikbdhelp.s'
 
 
 ; ================================================================================================================

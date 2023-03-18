@@ -16,7 +16,7 @@
                         include                 'macros/dmasnd.s'
                         include                 'macros/special.s'
                         include                 'macros/blitter.s'
-                        include                 'libs/ikbdhelp.s' ; FIXME -- move to macros
+                        include                 'macros/others/ikbdhelp.s'
 
 ; ================================================================================================================
 ; Definition of the map of the Heap
