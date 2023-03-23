@@ -16,6 +16,7 @@
                         include                 'macros/fileio.s'
                         ; files under test
                         include                 'macros/others/ikbdhelp.s'
+                        include                 'macros/others/mac.s'
 
 
 ; ================================================================================================================
@@ -113,6 +114,7 @@ START_OF_CI:
 ; Each test suite = one file to include
 ; ----------------------------------------------------------------------------------------------------------------
                         include 'itoa.s'
+                        include 'mac.s'
                         include 'ikbdhelp.s'
 ; ----------------------------------------------------------------------------------------------------------------
 ; After all tests
