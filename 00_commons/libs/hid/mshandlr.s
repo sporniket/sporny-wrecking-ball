@@ -21,6 +21,36 @@ MouseState_y_max        rs.w 1 ; signed WORD : max y position (exclusive)
 SIZEOF_MouseState       rs.b 0 ;
 EVENSIZEOF_MouseState   rs.b 0 ;
 
+; ----------------------------------------------------------------------------------------------------------------
+; Update position value : sign extend byte-sized difference to word, accumulate and cap
+; typical usage -- given that a3 points to the struct, and d4 contains the move to add (signed byte)
+;
+;                       MouseState_update_pos   a3,MouseState_x,d4,MouseState_x_min,MouseState_x_max
+;
+MouseState_update_pos   macro
+                        ; 1 - <<this>>, address register pointing to the structure
+                        ; 2 - field to update, e.g. MouseState_x
+                        ; 3 - data register containing the signed byte, to work as accumulator
+                        ; 4 - field used as minimum limit
+                        ; 5 - field used as maximum limit
+                        ; ---
+                        ; sign extends \3
+                        tst.b                   #7,\3
+                        beq                     .done_sign_extend_\@
+                        or.w                    #ff00,\3 ; sign-extends value
+                        ; ---
+                        ; accumulate and cap
+.done_sign_extend_\@    add.w                   \2(\1),\3 
+                        cmp.w                   \4(\1),\3
+                        blo                     .use_min_\@     ; force to minimum value if it's under this minimum
+                        cmp.w                   \5(\1),\3
+                        blo                     .write_back_\@  ; value is in range
+                        move.w                  \5(\1),\3       ; else forse to max - 1
+                        subq.w                  #1,\3
+                        bra                     .write_back_\@
+.use_min_\@             move.w                  \4(1),\3
+.write_back_\@          move.w                  \3,\2(\1)
+                        endm
 ; ================================================================================================================
 ; Struct : MsIkbdEvt -- Describe of the IKBD report.
 ; 
@@ -78,8 +108,9 @@ sr_mshandlr_reset       movem.l                 a0,-(sp)        ; save context
 
 ; ================================================================================================================
 ; client subroutine -- update mouse state
-;
-sr_mshandlr_update      movem.l                 a0-a2/d0,-(sp)        ; save context
+; side effects :
+; a0 -- pointer to the MouseState
+srA_mshandlr_update      movem.l                 a1-a2/d0,-(sp)        ; save context
                         ; a0 := mouse state
                         lea                     mshandler_ms_state,a0
                         ; a1 := pointer to the ring buffer
@@ -91,25 +122,15 @@ sr_mshandlr_update      movem.l                 a0-a2/d0,-(sp)        ; save con
                         ; extract button events
                         move.b                  (a2)+,d0
                         move.w                  d0,MouseState_buttons(a0)
-                        ; extract mouse move along x
+                        ; extract mouse move along x, update
                         move.b                  (a2)+,d0
-                        tst.b                   #7,d0
-                        beq                     .x_is_ready
-                        or.w                    #ff00,d0 ; sign-extends value
-                        ; accumulate move with current state, and save
-.x_is_ready             add.w                   MouseState_x(a0),d0 
-                        move.w                  d0,MouseState_x(a0) 
-                        ; extract mouse move along y
+                        MouseState_update_pos   a3,MouseState_x,d0,MouseState_x_min,MouseState_x_max
+                        ; extract mouse move along y, update
                         moveq                   #0,d0
                         move.b                  (a2)+,d0
-                        tst.b                   #7,d0
-                        beq                     .y_is_ready
-                        or.w                    #ff00,d0 ; sign-extends value
-                        ; accumulate move with current state, and save
-.y_is_ready             add.w                   MouseState_y(a0),d0 
-                        move.w                  d0,MouseState_y(a0)
+                        MouseState_update_pos   a3,MouseState_y,d0,MouseState_y_min,MouseState_y_max
                         ; done, restore context
-                        movem.l                 (sp)+,a0-a2/d0
+                        movem.l                 (sp)+,a1-a2/d0
                         rts
 
 
