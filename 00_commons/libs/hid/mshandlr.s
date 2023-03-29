@@ -35,9 +35,9 @@ MouseState_update_pos   macro
                         ; 5 - field used as maximum limit
                         ; ---
                         ; sign extends \3
-                        tst.b                   #7,\3
+                        btst                    #7,\3
                         beq                     .done_sign_extend_\@
-                        or.w                    #ff00,\3 ; sign-extends value
+                        or.w                    #$ff00,\3 ; sign-extends value
                         ; ---
                         ; accumulate and cap
 .done_sign_extend_\@    add.w                   \2(\1),\3 
@@ -48,7 +48,7 @@ MouseState_update_pos   macro
                         move.w                  \5(\1),\3       ; else forse to max - 1
                         subq.w                  #1,\3
                         bra                     .write_back_\@
-.use_min_\@             move.w                  \4(1),\3
+.use_min_\@             move.w                  \4(\1),\3
 .write_back_\@          move.w                  \3,\2(\1)
                         endm
 ; ================================================================================================================
@@ -124,11 +124,11 @@ srA_mshandlr_update      movem.l                 a1-a2/d0,-(sp)        ; save co
                         move.w                  d0,MouseState_buttons(a0)
                         ; extract mouse move along x, update
                         move.b                  (a2)+,d0
-                        MouseState_update_pos   a3,MouseState_x,d0,MouseState_x_min,MouseState_x_max
+                        MouseState_update_pos   a2,MouseState_x,d0,MouseState_x_min,MouseState_x_max
                         ; extract mouse move along y, update
                         moveq                   #0,d0
                         move.b                  (a2)+,d0
-                        MouseState_update_pos   a3,MouseState_y,d0,MouseState_y_min,MouseState_y_max
+                        MouseState_update_pos   a2,MouseState_y,d0,MouseState_y_min,MouseState_y_max
                         ; done, restore context
                         movem.l                 (sp)+,a1-a2/d0
                         rts
@@ -145,3 +145,4 @@ mshandlr_rbuf_store     ds.l    4,0 ; enough for 3 reports (pushing a forth one 
 ; Memory area to be used by the client code
 ;
 mshandler_ms_state      ds.b    EVENSIZEOF_MouseState,0
+                        even

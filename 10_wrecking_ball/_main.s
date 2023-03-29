@@ -17,6 +17,7 @@
                         include                 'macros/special.s'
                         include                 'macros/blitter.s'
                         include                 'macros/others/ikbdhelp.s'
+                        include                 'macros/others/rnbuf.s'
 
 ; ================================================================================================================
 ; Definition of the map of the Heap
@@ -534,6 +535,7 @@ BufferKeyboardState     ds.w                    64 ; to enforce even size
 ; ================================================================================================================
                         include                 'libs/blitter.s'
                         include                 'libs/dmasnd.s'
+                        include                 'libs/hid/mshandlr.s'
 ; ================================================================================================================
 ; App body
 ; ================================================================================================================
