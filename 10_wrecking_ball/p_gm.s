@@ -518,6 +518,10 @@ RelaunchPlayer           macro
                         move.b                  #0,GameState_Player_dy(\1)
                         move.b                  #32,GameState_Player_xNext(\1)
                         move.b                  #5,GameState_Player_yNext(\1)
+                        ; -- prepare mouse handler client
+                        move.w                  #160,d0
+                        move.w                  #20,d1
+                        bsr                     sr_mshandlr_reset_pos
                         endm
 ;
 ;
@@ -1060,73 +1064,32 @@ PhsGameUpdate:
 .startUpdatePlayer
                         ; -- load player status
                         ; d7 := GameState_Player.x
-                        move.b                  GameState_Player_x(a6),d7
-                        ; d6 := dx
-                        moveq                   #0,d6
-                        ; d5 := GameState_Player.y
-                        move.b                  GameState_Player_y(a6),d5
-                        ; d4 := dy
-                        moveq                   #0,d4
-                        ; ========
-                        ; -- poll joystick status
-                        ; a2 := Ptr to joystick states
-                        lea                     BufferJoystate,a2
-                        ; d3 := [j0,j1] combined in a word
-                        move.w                  (a2),d3
-                        ; ========
-                        ; -- Compution of dy
-                        ; ========
-                        ; -- j1.up == 0 ?
-                        btst                    #0,d3
-                        beq                     .tstMoveDown
-                        ; -- else moving up
-                        subq.b                  #1,d4
-                        ; ========
-                        ; -- j1.down == 0 ?
-.tstMoveDown            btst                    #1,d3
-                        beq                     .applyMoveY
-                        ; -- else moving down
-                        addq.b                  #1,d4
-                        ; ========
-                        ; -- Apply dy to y, must stay inside [0...]10
-.applyMoveY             add.b                   d4,d5
-                        ; -- y >= 0 ?
-                        bpl                     .capY
-                        ; -- else force y to 0
-                        moveq                   #0,d5
-                        bra                     .moveX
-                        ; -- y < 9 ?
-.capY                   cmp.b                   #9,d5
-                        bmi                     .moveX
-                        ; -- else force y to 8
-                        move.b                  #8,d5
-                        ; ========
-                        ; -- Computation of dx, the player moves by 2 units
-                        ; ========
-                        ; -- j1.left == 0 ?
-.moveX                  btst                    #2,d3
-                        beq                     .moveRight
-                        ; -- else moving left
-                        subq.b                  #2,d6
-                        ; ========
-.moveRight              ; -- j1.right == 0 ?
-                        btst                    #3,d3
-                        beq                     .applyMoveX
-                        ; -- else moving right
-                        addq.b                  #2,d6
-                        ; ========
-                        ; -- Apply dx to x, must stay inside [0...64]
-.applyMoveX             add.b                   d6,d7
-                        ; -- x >= 0 ?
-                        bpl                     .capX
-                        ; -- else force x to 0
                         moveq                   #0,d7
-                        bra                     .doUpdatePlayer
-                        ; -- x <= 64 ?
-.capX                   cmp.b                   #64,d7
-                        bmi                     .doUpdatePlayer
-                        ; -- else force x to 64
-                        move.b                  #64,d7
+                        move.b                  GameState_Player_x(a6),d7
+                        ; d6 := dx, prepared with -x
+                        moveq                   #0,d6
+                        sub.w                   d7,d6
+                        ; d5 := GameState_Player.y
+                        moveq                   #0,d5
+                        move.b                  GameState_Player_y(a6),d5
+                        ; d4 := dy, prepared with -y
+                        moveq                   #0,d4
+                        sub.w                   d5,d4
+                        ; ========
+                        ; -- compute next status using mouse
+                        ; a0 := pointer to updated mouse state
+                        bsr                     srA_mshandlr_update
+                        ; -- next x and dx
+                        ; d7 := next x = mouse x / 4
+                        move.w                  MouseState_x(a0),d7
+                        lsr.w                   #2,d7
+                        ; d6 := dx = d7 - x
+                        add.w                   d7,d6
+                        ; -- next y and dy
+                        ; d5 := next y = mouse y / 4
+                        move.w                  MouseState_y(a0),d5
+                        ; d4 := dx = d5 - y
+                        add.w                   d5,d4
                         ; ========
                         ; -- Save updated model
                         ; -- GameState_Player.nextX

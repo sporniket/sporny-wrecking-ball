@@ -107,6 +107,41 @@ sr_mshandlr_reset       movem.l                 a0,-(sp)        ; save context
                         rts
 
 ; ================================================================================================================
+; client subroutine -- setup position only
+; d0 : signed word, x position
+; d1 : signed word, y position
+;
+sr_mshandlr_reset_pos   movem.l                 a0,-(sp)        ; save context
+                        ; a0 := mouse state to setup
+                        lea                     mshandler_ms_state,a0
+                        move.w                  d0,MouseState_x(a0)
+                        move.w                  d1,MouseState_y(a0)
+                        movem.l                 (sp)+,a0        ; restore context
+                        rts
+
+
+; ================================================================================================================
+; client subroutine -- setup bounds
+; d0 : signed word, max x position, MUST be positive
+; d1 : signed word, max y position, MUST be positive
+;
+sr_mshandlr_reset_bounds movem.l                 a0/d2,-(sp)        ; save context
+                        ; a0 := mouse state to setup
+                        lea                     mshandler_ms_state,a0
+                        ; -- setup x bounds and apply
+                        moveq                   #0,d2
+                        move.w                  d2,MouseState_x_min(a0)
+                        move.w                  d0,MouseState_x_max(a0)
+                        MouseState_update_pos   a0,MouseState_x,d0,MouseState_x_min,MouseState_x_max
+                        ; -- setup y bounds and apply
+                        moveq                   #0,d2
+                        move.w                  d2,MouseState_y_min(a0)
+                        move.w                  d1,MouseState_y_max(a0)
+                        MouseState_update_pos   a0,MouseState_y,d0,MouseState_y_min,MouseState_y_max
+                        movem.l                 (sp)+,a0/d2         ; restore context
+                        rts
+
+; ================================================================================================================
 ; client subroutine -- update mouse state
 ; side effects :
 ; a0 -- pointer to the MouseState

@@ -134,9 +134,19 @@ CanStart:               ; --------
                         KBDVBASE_backupHandler  a0,KBDVBASE_joyvec,BufferSysJoystckHandlr
                         KBDVBASE_backupHandler  a0,KBDVBASE_mousevec,BufferSysMouseHandlr
                         KBDVBASE_backupHandler  a0,KBDVBASE_kbdsys,BufferSysKeybrdHandlr
-                        ; -- setup custom handlers
+                        ; -- setup custom handlers : joystick
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_joyvec,#OnJoystickSysEvent
+                        ; -- prepare mouse handler
+                        bsr                     sr_mshandlr_init
+                        ; -- prepare mouse handler client
+                        move.w                  #160,d0
+                        move.w                  #20,d1
+                        bsr                     sr_mshandlr_reset
+                        move.w                  #256,d0 ; 260 = 65 * 4
+                        move.w                  #32,d1  ; 32 = 8 * 4
+                        bsr                     sr_mshandlr_reset_bounds
+                        ; -- setup custom handler : mouse
                         KBDVBASE_waitWhileBusy  a0
                         KBDVBASE_setHandler     a0,KBDVBASE_mousevec,#OnMouseSysEvent
                         ; ========
