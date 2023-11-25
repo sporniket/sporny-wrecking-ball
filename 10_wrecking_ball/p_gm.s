@@ -1106,6 +1106,8 @@ PhsGameUpdate:
                         ; ========
 .doUpdateBallCaptive
                         ; reuse d7 = Player.xNext and d6 = Player.yNext from previous section.
+                        ; reuse d5 = Player.dx and d4 = Player.dy from previous section.
+                        ; reuse a0 = MouseState
                         ; -- check if ball is captive
                         ; d3 := captive state
                         moveq                   #0,d3
@@ -1118,17 +1120,11 @@ PhsGameUpdate:
                         ; d5 := decrement (-1) and translate to full freedom matrix (+40)
                         add.b                   #39,d5
                         move.b                  d5,GameState_Ball_yNext(a6)
-                        ; -- poll joystick status
-                        ; a2 := Ptr to joystick states
-                        lea                     BufferJoystate,a2
-                        ; d2 := [j0,j1] combined in a word
-                        moveq                   #0,d2
-                        move.w                  (a2),d2
-                        ; -- test j1.fire
-                        btst                    #7,d2
-                        ; -- handle no fire
+                        ; -- test left button
+                        btst                    #0,MouseState_buttons(a0)
+                        ; -- if not pressed
                         beq                     .doCaptvHandleNoFire
-                        ; -- else handle fire
+                        ; -- else pressed
                         cmp.b                   #BALL_CAPTV_WAIT_FIRE,d3
                         ; -- skip if not in waiting for fire
                         bne                     .doneCaptvHandleFire
@@ -1146,22 +1142,20 @@ PhsGameUpdate:
 .doneCaptvHandleFire
                         ; -- if waiting for release fire, react to joystick left/right
                         cmp.b                   #BALL_CAPTV_WAIT_RELEASE,d3
-                        ; -- skip if fire not pressed
+                        ; -- skip if released
                         bne                     .doneCaptvHandleSteer
-                        ; -- else test j1.left
-                        btst                    #2,d2
-                        ; -- skip to handle right when joystick not to the left
-                        beq                     .doCaptvHandleRight
+                        ; -- else test dx
+                        tst.b                    d5
+                        ; -- skip altogether if dx == 0
+                        beq                     .doneCaptvHandleSteer
+                        ; -- skip to handle right when dx >= 0
+                        bpl                     .doCaptvHandleRight
                         ; -- else update ball target and direction
                         move.b                  #BALL_POSCAPTV_LEFT,GameState_Ball_cptvPosT(a6)
                         move.b                  #$ff,GameState_Ball_dx(a6)
                         bra                     .doneCaptvHandleSteer
 .doCaptvHandleRight
-                        ; test j1.right
-                        btst                    #3,d2
-                        ; -- skip to handle right when joystick not to the left
-                        beq                     .doneCaptvHandleSteer
-                        ; -- else update ball target and direction
+                        ; -- update ball target and direction
                         move.b                  #BALL_POSCAPTV_RIGHT,GameState_Ball_cptvPosT(a6)
                         move.b                  #1,GameState_Ball_dx(a6)
 .doneCaptvHandleSteer

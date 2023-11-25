@@ -177,13 +177,12 @@ PhsMenuUpdate:
                         bra.w                   .thatsAll
                         ; select phase -- case not 1
 .waitFireRelease        dbf                     d7,.waitFirePress
-                        ; -- poll joystick status
-                        ; a0 := Ptr to joystick states
-                        lea                     BufferJoystate,a0
-                        ; d5 := [j0,j1] combined in a word
-                        move.w                  (a0),d6
-                        btst                    #7,d6
-                        ; -- if fire is pressed
+                        ; -- poll mouse state
+                        ; a0 := pointer to updated mouse state
+                        bsr                     srA_mshandlr_update
+                        ; -- test left button
+                        btst                    #0,MouseState_buttons(a0)
+                        ; -- if pressed
                         bne.s                   .thatsAll
                         ; -- else next state is 0
                         ; d7 :next state
@@ -192,14 +191,12 @@ PhsMenuUpdate:
                         bra.s                   .thatsAll
                         ; select phase -- case not 2
 .waitFirePress          dbf                     d7,.runTransition
-                        ;
-                        ; -- poll joystick status
-                        ; a0 := Ptr to joystick states
-                        lea                     BufferJoystate,a0
-                        ; d5 := [j0,j1] combined in a word
-                        move.w                  (a0),d6
-                        btst                    #7,d6
-                        ; -- if fire is not pressed
+                        ; -- poll mouse state
+                        ; a0 := pointer to updated mouse state
+                        bsr                     srA_mshandlr_update
+                        ; -- test left button
+                        btst                    #0,MouseState_buttons(a0)
+                        ; -- if not pressed
                         beq.s                   .thatsAll
                         ; -- else next state is 1
                         ; d7 :next state

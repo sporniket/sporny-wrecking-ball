@@ -5,6 +5,10 @@
 *.local.mk
 build
 
+# local ide artefacts
+.vscode
+.local
+
 # external tools and binaries
 zz_tools/bin
 zz_tools/vasm
