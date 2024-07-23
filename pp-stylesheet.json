@@ -1,0 +1,13 @@
+{
+    "tab_stops":{
+        "labels":{
+            "position":24
+        },
+        "mnemonic":{
+            "position":48
+        },
+        "operands":{
+            "position":72
+        }
+    }
+}
